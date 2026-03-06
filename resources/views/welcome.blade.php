@@ -66,7 +66,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-start">
                 <div class="lg:col-span-7">
                     <div class="flex items-center gap-5 mb-6">
-                        <img src="https://www.kkyungvelyy.com/photo/profile.jpg" alt="Park Kyoung Seo" class="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border theme-border">
+                        <img src="https://photo.kkyungvelyy.com/photo/profile.jpg" alt="Park Kyoung Seo" class="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border theme-border">
                         <span class="bio-lead theme-text-muted font-bold text-sm md:text-base block uppercase tracking-widest" data-i18n="heroBioLead">{{ __('portfolio.heroBioLead') }}</span>
                     </div>
                     <h1 class="text-6xl md:text-8xl font-bold theme-text mb-8 tracking-tighter transition-colors duration-500" data-i18n="heroName">{{ __('portfolio.heroName') }}</h1>
