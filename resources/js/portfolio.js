@@ -251,7 +251,6 @@ window.Portfolio = (() => {
                     <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-[1.5s]"></div>
                     <img crossorigin="anonymous" loading="lazy" class="grid-img absolute inset-0 w-full h-full object-cover transform scale-110 blur-xl opacity-0 transition-all duration-[1.2s] ease-out z-10 group-hover:scale-105">
                     
-                    <!-- 앨범 표시 뱃지 (여러 장일 경우) -->
                     ${post.photos.length > 1 ? `<div class="absolute top-4 right-4 z-20 bg-black/50 backdrop-blur-md rounded-full px-3 py-1 text-white text-xs font-bold border border-white/20 flex items-center gap-1 shadow-lg"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>${post.photos.length}</div>` : ''}
                     
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 md:p-8 z-20">
@@ -271,7 +270,7 @@ window.Portfolio = (() => {
             };
 
             imgEl.onload = initGridVisuals;
-            imgEl.src = post.photos[0].url;
+            imgEl.src = post.photos[0].url; // [최적화] src를 HTML에 직접 적지 않고 여기서 1번만 주입하여 단일 호출
             
             if (imgEl.complete && imgEl.naturalWidth > 0) {
                 initGridVisuals();
@@ -495,132 +494,129 @@ window.Portfolio = (() => {
         
         const targetIndex = state.currentPhotoIndex;
         
-        const performRender = () => {
-            if (state.currentPhotoIndex !== targetIndex) return;
+        // [최적화] 중복 호출의 원인이 되었던 외부 preloader 로직을 완전히 삭제하고, 바로 렌더링을 시작합니다.
+        if (state.currentPhotoIndex !== targetIndex) return;
 
-            DOM.modalSliderContent.innerHTML = `
-                <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
-                    <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh] rounded-lg overflow-hidden bg-black/10" id="photo-loupe-container">
-                        
-                        <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
-                        
-                        <!-- [수정] 3x3 그리드가 이미지 영역에만 딱 맞게 그려지도록 inline-block Wrapper 추가 -->
-                        <div class="relative inline-block max-w-full z-10">
-                            <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
-
-                            <!-- 그리드 오버레이 (이미지 Wrapper 내부에 배치되어 이미지 크기를 정확히 따라감) -->
-                            <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
-                                <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
-                                <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
-                                <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
-                                <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
-                            </div>
-                        </div>
-
-                        <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
-                            <img id="loupe-inner-img" crossorigin="anonymous" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
-                        </div>
-
-                        <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-40" title="3x3 구도 보기">
-                            <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="w-full md:w-[35%] flex flex-col justify-center p-6 md:p-10 space-y-8">
-                    <div class="space-y-4">
-                        <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
-                        <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
-                        <div id="color-palette-container" class="flex gap-3">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 pt-2">
-                        ${reactions.map(r => {
-                            const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
-                            const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
-                            return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
-                        }).join('')}
-                    </div>
-                    <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
-                        <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
-                        <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
-                        <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
-                    </div>
-                    <div class="flex gap-3 pt-4 pb-10 md:pb-0">
-                        <button onclick="window.Portfolio.downloadFramedPhoto()" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
-                        <button onclick="window.Portfolio.sharePhoto()" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
-                    </div>
-                </div>
-            `;
-
-            requestAnimationFrame(() => {
-                void DOM.modalSliderContent.offsetWidth;
-                DOM.modalSliderContent.style.opacity = '1';
-
-                const imgEl = document.getElementById('active-photo-img');
-                const loupeEl = document.getElementById('photo-loupe');
-                const loupeInner = document.getElementById('loupe-inner-img');
-                const skeleton = DOM.modalSliderContent.querySelector('.skeleton-bg');
-
-                if(imgEl && loupeEl && loupeInner) {
-                    const initVisuals = () => {
-                        imgEl.classList.remove('scale-[1.02]', 'blur-lg', 'opacity-0');
-                        imgEl.classList.add('scale-100', 'blur-0', 'opacity-100');
-                        applyColorFeatures(imgEl);
-                        if(skeleton) skeleton.classList.add('opacity-0');
-                    };
+        DOM.modalSliderContent.innerHTML = `
+            <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
+                <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh] rounded-lg overflow-hidden bg-black/10" id="photo-loupe-container">
                     
-                    imgEl.onload = initVisuals;
-                    imgEl.src = photo.url;
+                    <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
+                    
+                    <div class="relative inline-block max-w-full z-10">
+                        <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
+
+                        <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
+                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
+                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
+                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
+                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
+                        </div>
+                    </div>
+
+                    <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
+                        <img id="loupe-inner-img" crossorigin="anonymous" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
+                    </div>
+
+                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-40" title="3x3 구도 보기">
+                        <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="w-full md:w-[35%] flex flex-col justify-center p-6 md:p-10 space-y-8">
+                <div class="space-y-4">
+                    <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
+                    <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
+                </div>
+
+                <div class="space-y-3">
+                    <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
+                    <div id="color-palette-container" class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-2">
+                    ${reactions.map(r => {
+                        const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
+                        const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
+                        return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
+                    }).join('')}
+                </div>
+                <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
+                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
+                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
+                    <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
+                </div>
+                <div class="flex gap-3 pt-4 pb-10 md:pb-0">
+                    <button onclick="window.Portfolio.downloadFramedPhoto()" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
+                    <button onclick="window.Portfolio.sharePhoto()" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
+                </div>
+            </div>
+        `;
+
+        requestAnimationFrame(() => {
+            void DOM.modalSliderContent.offsetWidth;
+            DOM.modalSliderContent.style.opacity = '1';
+
+            const imgEl = document.getElementById('active-photo-img');
+            const loupeEl = document.getElementById('photo-loupe');
+            const loupeInner = document.getElementById('loupe-inner-img');
+            const skeleton = DOM.modalSliderContent.querySelector('.skeleton-bg');
+
+            if(imgEl && loupeEl && loupeInner) {
+                const initVisuals = () => {
+                    imgEl.classList.remove('scale-[1.02]', 'blur-lg', 'opacity-0');
+                    imgEl.classList.add('scale-100', 'blur-0', 'opacity-100');
+                    applyColorFeatures(imgEl);
+                    if(skeleton) skeleton.classList.add('opacity-0');
+                    
+                    // [최적화] 메인 이미지가 완전히 불러와진 이후에 돋보기 이미지에 동일한 캐시 주소를 주입 (중복 네트워크 방지)
                     loupeInner.src = photo.url;
-
-                    if (imgEl.complete && imgEl.naturalWidth > 0) {
-                        initVisuals();
-                    }
-
-                    imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
-                    imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
-                    imgEl.addEventListener('mousemove', (e) => {
-                        const rect = imgEl.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const y = e.clientY - rect.top;
-
-                        loupeEl.style.left = `${x}px`;
-                        loupeEl.style.top = `${y}px`;
-
-                        const zoom = 2.5;
-                        loupeInner.style.width = `${rect.width * zoom}px`;
-                        loupeInner.style.height = `${rect.height * zoom}px`;
-                        loupeInner.style.left = `${90 - (x * zoom)}px`;
-                        loupeInner.style.top = `${90 - (y * zoom)}px`;
-                    });
-                }
+                };
                 
-                if (post.photos.length > 1) {
-                    const nextIdx = (targetIndex + 1) % post.photos.length;
-                    const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
-                    new Image().src = post.photos[nextIdx].url;
-                    new Image().src = post.photos[prevIdx].url;
-                }
-            });
-        };
+                imgEl.onload = initVisuals;
+                imgEl.src = photo.url; // 여기서 네트워크 통신은 단 1번만 일어납니다.
 
-        const preloader = new Image();
-        preloader.src = photo.url;
-        
-        if (preloader.complete) {
-            setTimeout(performRender, 50);
-        } else {
-            performRender();
-        }
+                if (imgEl.complete && imgEl.naturalWidth > 0) {
+                    initVisuals();
+                }
+
+                imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
+                imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
+                imgEl.addEventListener('mousemove', (e) => {
+                    const rect = imgEl.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    loupeEl.style.left = `${x}px`;
+                    loupeEl.style.top = `${y}px`;
+
+                    const zoom = 2.5;
+                    loupeInner.style.width = `${rect.width * zoom}px`;
+                    loupeInner.style.height = `${rect.height * zoom}px`;
+                    loupeInner.style.left = `${90 - (x * zoom)}px`;
+                    loupeInner.style.top = `${90 - (y * zoom)}px`;
+                });
+            }
+            
+            // [최적화] 다음/이전 사진 프리로딩 시 반드시 CORS 설정을 붙여서 캐시 분리 현상을 막습니다.
+            if (post.photos.length > 1) {
+                const nextIdx = (targetIndex + 1) % post.photos.length;
+                const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
+                
+                const preloadNext = new Image();
+                preloadNext.crossOrigin = "Anonymous";
+                preloadNext.src = post.photos[nextIdx].url;
+
+                const preloadPrev = new Image();
+                preloadPrev.crossOrigin = "Anonymous";
+                preloadPrev.src = post.photos[prevIdx].url;
+            }
+        });
     };
 
     const clearMapMarkers = () => {
