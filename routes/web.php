@@ -32,3 +32,5 @@ Route::prefix('api')->group(function () {
 });
 
 Route::get('/admin/logs/monitoring-dashboard', [MonitoringController::class, 'index'])->name('admin.monitoring');
+Route::get('/admin/upload', [\App\Http\Controllers\AdminController::class, 'uploadView']);
+Route::post('/admin/upload-process', [\App\Http\Controllers\AdminController::class, 'processUpload']);
