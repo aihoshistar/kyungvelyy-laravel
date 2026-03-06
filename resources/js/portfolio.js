@@ -56,6 +56,9 @@ window.Portfolio = (() => {
         initTheme();
         updateLanguage(state.lang);
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
+
+        // [추가] 딥링크(Deep Link) 확인 및 모달 자동 열기
+        checkUrlHash();
     };
 
     const initFilters = () => {
@@ -175,7 +178,6 @@ window.Portfolio = (() => {
 
             card.innerHTML = `
                 <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
-                    <!-- [최적화] 그리드 이미지도 crossorigin 속성을 추가하여 동일한 캐시 사용 강제 -->
                     <img src="${post.photos[0].url}" crossorigin="anonymous" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
                         <span class="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase mb-2">${catTranslation}</span>
@@ -252,7 +254,7 @@ window.Portfolio = (() => {
             }));
 
         } catch(e) {
-            console.error("Color extraction failed, using defaults.", e);
+            console.error("Color extraction failed", e);
             return defaultColors;
         }
     };
@@ -273,6 +275,21 @@ window.Portfolio = (() => {
                 radial-gradient(circle at 90% 90%, ${colors[3]?.glow || 'transparent'} 0%, transparent 50%),
                 var(--color-surface)
             `;
+        }
+    };
+
+    // [추가] URL Hash 검사하여 모달 바로 열기 (Deep Link 처리)
+    const checkUrlHash = () => {
+        const hash = window.location.hash;
+        if (hash.startsWith('#post-')) {
+            const parts = hash.replace('#post-', '').split('/photo-');
+            const postId = parseInt(parts[0], 10);
+            const photoIndex = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+
+            const targetPost = state.posts.find(p => p.id == postId);
+            if (targetPost) {
+                setTimeout(() => openModal(targetPost, photoIndex), 500); // 렌더링 후 약간의 딜레이로 부드럽게 열림
+            }
         }
     };
 
@@ -322,13 +339,16 @@ window.Portfolio = (() => {
         }
     };
 
-    const openModal = (post) => {
-        state.activePost = post; state.currentPhotoIndex = 0; state.isGridActive = false;
+    // [수정] initialIndex를 매개변수로 받아 딥링크 호환성 추가
+    const openModal = (post, initialIndex = 0) => {
+        state.activePost = post;
+        state.currentPhotoIndex = initialIndex;
+        state.isGridActive = false;
 
         DOM.modalContainer.style.background = 'var(--color-surface)';
 
         renderActiveSlide();
-        fetchReactions(post.photos[0].id);
+        fetchReactions(post.photos[state.currentPhotoIndex].id);
 
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
@@ -337,6 +357,9 @@ window.Portfolio = (() => {
 
     const closeModal = () => {
         DOM.modalContainer.classList.add('scale-95'); DOM.modal.classList.add('opacity-0');
+
+        // URL Hash 초기화
+        history.replaceState(null, '', window.location.pathname + window.location.search);
 
         setTimeout(() => {
             DOM.modal.classList.add('hidden');
@@ -362,6 +385,9 @@ window.Portfolio = (() => {
         const post = state.activePost; const photo = post.photos[state.currentPhotoIndex]; if (!photo) return;
         const dict = window.I18N[state.lang];
 
+        // URL 주소창 딥링크 반영
+        history.replaceState(null, '', `#post-${post.id}/photo-${state.currentPhotoIndex}`);
+
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
 
         const titleStr = getTrans(photo.title);
@@ -376,7 +402,7 @@ window.Portfolio = (() => {
         if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
 
         const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
-        const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}/photo-${state.currentPhotoIndex}`;
         const safePhotoData = JSON.stringify(photo).replace(/"/g, '&quot;');
 
         DOM.modalSliderContent.innerHTML = `
@@ -384,7 +410,6 @@ window.Portfolio = (() => {
                 <div class="relative inline-block max-w-full max-h-full" id="photo-loupe-container">
                     <img id="active-photo-img" crossorigin="anonymous" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair">
 
-                    <!-- [최적화] 돋보기를 background-image 방식에서 img 태그 방식으로 변경하여 캐시 활용 -->
                     <div id="photo-loupe" class="loupe hidden md:block overflow-hidden">
                         <img id="loupe-inner-img" crossorigin="anonymous" src="${photo.url}" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
                     </div>
@@ -459,16 +484,12 @@ window.Portfolio = (() => {
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
 
-                    // 1. 돋보기 UI 박스의 위치 이동
                     loupeEl.style.left = `${x}px`;
                     loupeEl.style.top = `${y}px`;
 
-                    // 2. 내부 이미지 확대 비율 및 포커싱 이동 (background-image 대체 로직)
                     const zoom = 2.5;
                     loupeInner.style.width = `${rect.width * zoom}px`;
                     loupeInner.style.height = `${rect.height * zoom}px`;
-
-                    // 돋보기 원(width:180px)의 정중앙 반경(90px)에 커서 포인트를 맞춤
                     loupeInner.style.left = `${90 - (x * zoom)}px`;
                     loupeInner.style.top = `${90 - (y * zoom)}px`;
                 });
@@ -512,7 +533,6 @@ window.Portfolio = (() => {
             if (!post.lat || !post.photos?.length) return;
             const content = document.createElement('div');
             content.className = 'w-12 h-12 rounded-full border-2 border-white shadow-xl bg-surface cursor-pointer transition-transform hover:scale-110 overflow-hidden relative';
-            // [최적화] 맵 마커 이미지도 crossorigin 속성 통일
             content.innerHTML = `<img src="${post.photos[0].url}" crossorigin="anonymous" class="w-full h-full object-cover">`;
             content.addEventListener('click', () => openModal(post));
             const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1.2 });
@@ -539,16 +559,37 @@ window.Portfolio = (() => {
         setTimeout(() => { DOM.toast.classList.add('opacity-0', 'translate-y-10'); }, 3000);
     };
 
+    // [수정] EXIF 메타데이터를 다운로드 프레임에 시각적으로 추가
     const downloadFramedPhoto = (photoDataStr, postUrl) => {
         showToast(window.I18N[state.lang].toastWait || '프레임을 생성하는 중입니다...');
-        const photo = JSON.parse(photoDataStr); const img = new Image(); img.crossOrigin = "Anonymous"; img.src = photo.url;
-        img.onload = () => {
-            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-            const px = 120, pt = 120, pb = 400; canvas.width = img.width + (px * 2); canvas.height = img.height + pt + pb;
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, px, pt, img.width, img.height);
+        const photo = JSON.parse(photoDataStr);
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = photo.url;
 
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 이미지 크기에 비례하여 동적으로 여백(마진) 계산
+            const margin = Math.max(120, img.width * 0.05);
+            const pt = margin;
+            const px = margin;
+            const pb = margin * 3.5; // 하단 텍스트 및 QR이 들어갈 여유 공간
+
+            canvas.width = img.width + (px * 2);
+            canvas.height = img.height + pt + pb;
+
+            // 흰색 배경 및 원본 이미지 삽입
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, px, pt, img.width, img.height);
+
+            // 3x3 그리드가 활성화되어 있다면 프레임에도 그려줍니다.
             if (state.isGridActive) {
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.7)"; ctx.lineWidth = Math.max(2, img.width * 0.002); ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+                ctx.lineWidth = Math.max(2, img.width * 0.002);
+                ctx.beginPath();
                 ctx.moveTo(px + img.width / 3, pt); ctx.lineTo(px + img.width / 3, pt + img.height);
                 ctx.moveTo(px + (img.width * 2) / 3, pt); ctx.lineTo(px + (img.width * 2) / 3, pt + img.height);
                 ctx.moveTo(px, pt + img.height / 3); ctx.lineTo(px + img.width, pt + img.height / 3);
@@ -556,9 +597,42 @@ window.Portfolio = (() => {
                 ctx.stroke();
             }
 
-            ctx.fillStyle = "#111111"; ctx.font = "bold 60px Pretendard, sans-serif"; ctx.fillText(getTrans(photo.title), px, pt + img.height + 100);
-            const qr = new QRious({ value: postUrl, size: 180, level: 'H' }); const qrImg = new Image(); qrImg.src = qr.toDataURL();
-            qrImg.onload = () => { ctx.drawImage(qrImg, canvas.width - px - 180, pt + img.height + 80, 180, 180); const link = document.createElement('a'); link.download = state.isGridActive ? `photo_grid.jpg` : `photo.jpg`; link.href = canvas.toDataURL("image/jpeg", 0.95); link.click(); };
+            // 텍스트 비율 동적 계산
+            const titleFontSize = Math.max(40, img.width * 0.025);
+            const exifFontSize = Math.max(24, img.width * 0.015);
+            const textYOffset = pt + img.height + margin * 1.2;
+
+            // 1. 제목 그리기
+            ctx.fillStyle = "#111111";
+            ctx.font = `bold ${titleFontSize}px Pretendard, -apple-system, sans-serif`;
+            const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
+            ctx.fillText(title, px, textYOffset);
+
+            // 2. EXIF 메타데이터 그리기 (카메라, 렌즈, ISO 등)
+            const exifArr = [];
+            if (photo.exif_body) exifArr.push(photo.exif_body);
+            if (photo.exif_lens) exifArr.push(photo.exif_lens);
+            if (photo.exif_focal_length) exifArr.push(`${photo.exif_focal_length}mm`);
+            if (photo.exif_aperture) exifArr.push(`f/${parseFloat(photo.exif_aperture)}`);
+            if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
+
+            ctx.fillStyle = "#666666";
+            ctx.font = `400 ${exifFontSize}px Pretendard, -apple-system, sans-serif`;
+            ctx.fillText(exifArr.join('  |  '), px, textYOffset + titleFontSize * 1.5);
+
+            // 3. QR 코드 그리기 (딥링크 연동)
+            const qrSize = margin * 1.8;
+            const qr = new QRious({ value: postUrl, size: qrSize, level: 'H' });
+            const qrImg = new Image();
+            qrImg.src = qr.toDataURL();
+
+            qrImg.onload = () => {
+                ctx.drawImage(qrImg, canvas.width - px - qrSize, pt + img.height + margin * 0.6, qrSize, qrSize);
+                const link = document.createElement('a');
+                link.download = state.isGridActive ? `photo_grid_${photo.id}.jpg` : `photo_${photo.id}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg", 0.95);
+                link.click();
+            };
         };
     };
 
