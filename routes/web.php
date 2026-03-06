@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\PostController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,4 +14,4 @@ use App\Http\Controllers\PhotoController;
 |
 */
 
-Route::get('/', [PhotoController::class, 'index'])->name('home');
+Route::get('/', [PostController::class, 'index'])->name('home');

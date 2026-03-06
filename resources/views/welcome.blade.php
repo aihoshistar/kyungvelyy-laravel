@@ -108,49 +108,51 @@
             </div>
 
             <!-- Photo Grid -->
-<!-- Photo Grid 내부를 이렇게 변경하세요 -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    @foreach($photos as $photo)
-    <!-- json 타입인 images 컬럼의 첫 번째 이미지를 대표 이미지로 사용합니다. -->
-    @php $firstImage = json_decode($photo->images)[0] ?? null; @endphp
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                @foreach($posts as $post)
+                <!-- 1:N 관계에서 첫 번째 이미지를 대표 이미지로 사용합니다. -->
+                @php $firstImage = $post->photos->first(); @endphp
 
-    <div class="photo-card group relative rounded-xl overflow-hidden bg-[#111] border border-gray-800">
-        <div class="aspect-[4/3] w-full overflow-hidden">
-            @if($firstImage)
-            <img src="{{ $firstImage->url }}"
-                 alt="{{ json_decode($photo->title)->ko ?? 'Photo' }}"
-                 class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700 ease-in-out">
-            @endif
-        </div>
+                <div class="photo-card group relative rounded-xl overflow-hidden bg-[#111] border border-gray-800">
+                    <!-- 종횡비(aspect_ratio)가 1.5면 3/2, 1.33이면 4/3 등으로 Blade에서 분기 처리 가능 -->
+                    <div class="{{ $firstImage && $firstImage->aspect_ratio == 1.5 ? 'aspect-[3/2]' : 'aspect-[4/3]' }} w-full overflow-hidden">
+                        @if($firstImage)
+                        <img src="{{ $firstImage->url }}"
+                            alt="{{ json_decode($post->title)->ko ?? 'Photo' }}"
+                            class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700 ease-in-out">
+                        @endif
+                    </div>
 
-        <div class="p-5 bg-[#0a0a0a]/95 border-t border-gray-800">
-            <div class="flex justify-between items-start mb-3">
-                <h4 class="text-white font-medium text-lg">{{ json_decode($photo->title)->ko ?? '' }}</h4>
-                <span class="text-xs px-2 py-1 bg-gray-900 text-gray-400 rounded">{{ $photo->category }}</span>
+                    <div class="p-5 bg-[#0a0a0a]/95 border-t border-gray-800">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="text-white font-medium text-lg">{{ json_decode($post->title)->ko ?? '' }}</h4>
+                            <span class="text-xs px-2 py-1 bg-gray-900 text-gray-400 rounded">{{ $post->category }}</span>
+                        </div>
+
+                        @if($firstImage)
+                        <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-gray-500 mt-4">
+                            <div class="flex flex-col">
+                                <span class="text-gray-600 mb-0.5">CAMERA</span>
+                                <span class="text-gray-300 font-medium">{{ $firstImage->exif_body }}</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-gray-600 mb-0.5">LENS</span>
+                                <span class="text-gray-300 font-medium">{{ $firstImage->exif_lens }}</span>
+                            </div>
+                            <!-- 숫자형으로 분리된 데이터를 프론트엔드에서 조합하여 표시 -->
+                            <div class="flex flex-col col-span-2 pt-2 border-t border-gray-800/50 mt-1 flex-row space-x-4">
+                                <span><strong class="text-gray-300">{{ $firstImage->exif_focal_length }}mm</strong></span>
+                                <span><strong class="text-gray-300">f/{{ $firstImage->exif_aperture }}</strong></span>
+                                <span>ISO <strong class="text-gray-300">{{ $firstImage->exif_iso }}</strong></span>
+                                <span><strong class="text-gray-300">{{ $firstImage->exif_shutter_speed_num }}/{{ $firstImage->exif_shutter_speed_den }}s</strong></span>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
             </div>
 
-            @if($firstImage && isset($firstImage->exif))
-            <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-gray-500 mt-4">
-                <div class="flex flex-col">
-                    <span class="text-gray-600 mb-0.5">CAMERA</span>
-                    <span class="text-gray-300 font-medium">{{ $firstImage->exif->body }}</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-gray-600 mb-0.5">LENS</span>
-                    <span class="text-gray-300 font-medium">{{ $firstImage->exif->lens }}</span>
-                </div>
-                <div class="flex flex-col col-span-2 pt-2 border-t border-gray-800/50 mt-1 flex-row space-x-4">
-                    <span><strong class="text-gray-300">{{ $firstImage->exif->focalLength }}</strong></span>
-                    <span><strong class="text-gray-300">{{ $firstImage->exif->aperture }}</strong></span>
-                    <span>ISO <strong class="text-gray-300">{{ $firstImage->exif->iso }}</strong></span>
-                    <span><strong class="text-gray-300">{{ $firstImage->exif->shutterSpeed }}</strong></span>
-                </div>
-            </div>
-            @endif
-        </div>
-    </div>
-    @endforeach
-</div>
 
         </section>
     </main>
