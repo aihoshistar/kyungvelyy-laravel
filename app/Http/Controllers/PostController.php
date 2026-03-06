@@ -11,15 +11,17 @@ class PostController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index($locale)
     {
-        // Post를 불러올 때 관계된 사진(photos)도 함께 로드합니다.
-        $posts = \App\Models\Post::with('photos')->orderBy('taken_at', 'desc')->get();
+        // [수정] 최신 포스트(created_at 기준 내림차순)를 먼저 가져오도록 정렬 추가
+        $posts = Post::with(['photos' => function($query) {
+            // 포스트 내부의 여러 사진들은 order(순서)에 맞춰 정방향 정렬
+            $query->orderBy('id', 'asc');
+        }])
+        ->orderBy('taken_at', 'desc') // 최신 게시물이 위로 오게 (내림차순)
+        ->get();
 
-        // 데이터를 프론트엔드의 JS 변수로 온전히 넘기기 위해 JSON으로 캐스팅합니다.
-        return view('welcome', [
-            'posts' => $posts
-        ]);
+        return view('welcome', compact('posts'));
     }
 
     /**

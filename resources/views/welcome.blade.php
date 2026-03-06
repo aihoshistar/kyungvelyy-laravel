@@ -61,7 +61,7 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 pt-32 pb-24 relative min-h-screen">
-        <!-- Profile Header (기존 유지) -->
+        <!-- Profile Header -->
         <header class="mb-32 reveal" id="profile-header">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-start">
                 <div class="lg:col-span-7">
@@ -111,7 +111,7 @@
             </div>
         </header>
 
-        <!-- [수정] Gallery & Advanced Controls -->
+        <!-- Gallery & Advanced Controls -->
         <div id="gallery-controls" class="flex flex-col mb-10 space-y-5 reveal">
             <div class="flex flex-col md:flex-row md:items-end justify-between space-y-4 md:space-y-0">
                 <div class="flex items-center space-x-6">
@@ -176,10 +176,12 @@
         </div>
     </main>
 
-    <!-- Photo Modal (기존과 동일, 3x3 라인은 JS에서 삽입됨) -->
+    <!-- Photo Modal -->
     <div id="photo-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm overflow-hidden opacity-0 flex items-center justify-center select-none transition-opacity duration-500">
         <div id="modal-container" class="relative w-[95%] max-w-7xl h-[85vh] md:h-[80vh] theme-surface rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-transform duration-500 scale-95">
-            <div class="w-full flex justify-between items-center px-6 py-5 border-b theme-border bg-opacity-50 z-[60]">
+            
+            <!-- [해결] shrink-0를 주어 상단 헤더가 찌그러지지 않게 방지 -->
+            <div class="w-full flex justify-between items-center px-6 py-5 border-b theme-border bg-opacity-50 z-[60] shrink-0">
                 <div class="flex flex-col">
                     <span id="modal-indicator" class="text-xs md:text-sm font-bold tracking-[0.3em] theme-text-muted uppercase mb-1">01 / 05</span>
                     <div id="modal-title-area" class="theme-text font-medium transition-all duration-500 truncate max-w-[250px] md:max-w-md"></div>
@@ -188,15 +190,20 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="flex-grow flex flex-col md:flex-row items-stretch overflow-hidden relative">
+            
+            <!-- [해결] 모바일에서는 세로 스크롤(overflow-y-auto)을 허용하여 이미지가 글씨를 침범하지 않게 분리 -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden md:overflow-hidden relative w-full">
                 <button onclick="window.Portfolio.prevPhoto()" class="nav-btn absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full theme-text hidden md:flex z-[70] items-center justify-center transition-all shadow-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
                 <button onclick="window.Portfolio.nextPhoto()" class="nav-btn absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full theme-text hidden md:flex z-[70] items-center justify-center transition-all shadow-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-                <div id="modal-slider-content" class="w-full h-full flex flex-col md:flex-row items-stretch"></div>
+                
+                <!-- [해결] 모바일에서 높이가 자연스럽게 늘어나도록 h-full 대신 min-h-full 사용 -->
+                <div id="modal-slider-content" class="w-full min-h-full md:h-full flex flex-col md:flex-row items-stretch"></div>
             </div>
+            
             <div class="absolute bottom-6 w-full flex justify-center md:hidden pointer-events-none">
                 <div class="flex space-x-2" id="modal-dots"></div>
             </div>

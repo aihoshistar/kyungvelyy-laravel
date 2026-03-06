@@ -402,9 +402,9 @@ window.Portfolio = (() => {
         if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
 
         const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
-        const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}/photo-${state.currentPhotoIndex}`;
-        const safePhotoData = JSON.stringify(photo).replace(/"/g, '&quot;');
-
+        
+        // [수정] 복잡한 문자열 치환(safePhotoData 등)을 전부 삭제했습니다.
+        
         DOM.modalSliderContent.innerHTML = `
             <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter relative overflow-hidden">
                 <div class="relative inline-block max-w-full max-h-full" id="photo-loupe-container">
@@ -454,8 +454,9 @@ window.Portfolio = (() => {
                     <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
                 </div>
                 <div class="flex gap-3 pt-4">
-                    <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
-                    <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
+                    <!-- [수정] onclick에 인자를 넘기지 않고 함수만 호출하도록 아주 깔끔하게 변경했습니다. -->
+                    <button onclick="window.Portfolio.downloadFramedPhoto()" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
+                    <button onclick="window.Portfolio.sharePhoto()" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
                 </div>
             </div>
         `;
@@ -559,10 +560,14 @@ window.Portfolio = (() => {
         setTimeout(() => { DOM.toast.classList.add('opacity-0', 'translate-y-10'); }, 3000);
     };
 
-    // [수정] EXIF 메타데이터를 다운로드 프레임에 시각적으로 추가
-    const downloadFramedPhoto = (photoDataStr, postUrl) => {
+    // [수정] 매개변수(인자)를 받지 않고, 내부 state에서 직접 데이터를 꺼내 쓰도록 변경
+    const downloadFramedPhoto = () => {
+        // 에러를 유발하던 JSON 파싱을 없애고 state에서 바로 현재 사진 객체를 가져옵니다.
+        const post = state.activePost;
+        const photo = post.photos[state.currentPhotoIndex];
+        const postUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}/photo-${state.currentPhotoIndex}`;
+        
         showToast(window.I18N[state.lang].toastWait || '프레임을 생성하는 중입니다...');
-        const photo = JSON.parse(photoDataStr);
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = photo.url;
@@ -629,14 +634,24 @@ window.Portfolio = (() => {
             qrImg.onload = () => {
                 ctx.drawImage(qrImg, canvas.width - px - qrSize, pt + img.height + margin * 0.6, qrSize, qrSize);
                 const link = document.createElement('a');
-                link.download = state.isGridActive ? `photo_grid_${photo.id}.jpg` : `photo_${photo.id}.jpg`;
+                
+                // [수정] 다운로드 파일명을 깔끔한 영문 조합으로 설정
+                // 예: kkyung_photo_seoul_tower_1.jpg
+                const cleanSlug = post.slug ? post.slug.replace(/[^a-zA-Z0-9-]/g, '') : 'post';
+                link.download = state.isGridActive ? `kkyung_photo_grid_${cleanSlug}_${photo.id}.jpg` : `kkyung_photo_${cleanSlug}_${photo.id}.jpg`;
+                
                 link.href = canvas.toDataURL("image/jpeg", 0.95);
                 link.click();
             };
         };
     };
 
-    const sharePhoto = (title, imageUrl, postUrl) => {
+    // [수정] 매개변수 없이 내부 state를 사용하도록 변경
+    const sharePhoto = () => {
+        const photo = state.activePost.photos[state.currentPhotoIndex];
+        const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
+        const postUrl = `${window.location.origin}${window.location.pathname}#post-${state.activePost.id}/photo-${state.currentPhotoIndex}`;
+
         if (navigator.share) { navigator.share({ title: `PHOTO - ${title}`, url: postUrl }); }
         else { navigator.clipboard.writeText(postUrl).then(() => showToast(window.I18N[state.lang].toastCopy || 'Link Copied!')); }
     };
