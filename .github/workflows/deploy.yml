@@ -1,4 +1,4 @@
-name: Deploy to Hostinger
+name: Ultra-Fast Incremental Deploy
 
 on:
   push:
@@ -6,75 +6,79 @@ on:
       - main
 
 jobs:
-  laravel-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. 소스 코드 체크아웃
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 이력을 가져와 파일 변경 추적 성능 향상
 
-      # 2. PHP 환경 설정
+      # 1. 배포 상태 파일 캐싱 (가장 중요한 최적화)
+      # 지난 배포 때 어떤 파일을 올렸는지 기록한 파일을 보관하여 다음 배포 때 재사용합니다.
+      - name: Cache FTP Sync State
+        uses: actions/cache@v4
+        with:
+          path: .ftp-deploy-sync-state.json
+          key: ${{ runner.os }}-ftp-state-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ftp-state-
+
+      # 2. PHP 및 Composer 설정 (캐싱 포함)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
-          coverage: none
 
-      # 3. Composer 의존성 설치 (운영 환경 최적화)
-      - name: Install Composer Dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
 
-      # 4. Node.js 환경 설정 및 에셋 빌드 (Vite)
+      - name: Install Composer
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      # 3. Node.js 및 에셋 빌드 (캐싱 포함)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install NPM Dependencies & Build
+      - name: Cache NPM Dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install NPM & Build
         run: |
           npm install
           npm run build
 
-      # 5. 배포용 파일 정리 (rsync를 사용하여 자기 복사 방지 및 구조 최적화)
+      # 4. 배포 패키지 구성
       - name: Prepare Deployment Files
         run: |
           rm -rf deploy
           mkdir -p deploy
-
-          # 'deploy' 폴더 자체를 제외하고 모든 파일을 './deploy/'로 복사
           rsync -av --exclude='deploy' . ./deploy/
-
-          # 불필요한 파일 삭제
-          rm -rf ./deploy/node_modules
-          rm -rf ./deploy/tests
-          rm -rf ./deploy/.git
-          rm -rf ./deploy/.github
-          rm -rf ./deploy/storage/logs/*.log
-
-          # 필수 디렉토리 구조 강제 생성
-          mkdir -p ./deploy/storage/framework/cache/data
-          mkdir -p ./deploy/storage/framework/app/cache
-          mkdir -p ./deploy/storage/framework/sessions
-          mkdir -p ./deploy/storage/framework/views
+          rm -rf ./deploy/node_modules ./deploy/tests ./deploy/.git ./deploy/.github
+          mkdir -p ./deploy/storage/framework/{cache/data,sessions,views}
           mkdir -p ./deploy/storage/logs
 
-      # 6. FTP를 통한 파일 전송 (서버 정보 필수 입력)
-      - name: Sync Files to Server
+      # 5. 초고속 증분 전송 (변경된 파일만!)
+      - name: Sync Changed Files Only
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          # GitHub Secrets에 등록한 이름과 정확히 일치해야 합니다.
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # 이전 단계에서 준비한 배포용 폴더 경로
           local-dir: ./deploy/
-          # Hostinger FTP 계정 생성 시 지정한 경로 내부의 루트
           server-dir: ./
+          # 'dry-run: false'가 기본값이며, 자동으로 파일 비교 후 전송합니다.
+          # 전송 후 .ftp-deploy-sync-state.json 파일이 로컬에 생성됩니다.
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
             .env
-            storage/*.zmdi
