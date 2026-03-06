@@ -90,11 +90,9 @@ window.Portfolio = (() => {
             const key = e.key.toLowerCase();
             const isModalOpen = !DOM.modal.classList.contains('hidden');
 
-            if (key === '?') {
-                toggleShortcutHelp();
-            } else if (key === 'd') {
-                toggleTheme();
-            } else if (key === 'f') {
+            if (key === '?') toggleShortcutHelp();
+            else if (key === 'd') toggleTheme();
+            else if (key === 'f') {
                 if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
                 else document.exitFullscreen();
             } else if (!isModalOpen) {
@@ -170,11 +168,8 @@ window.Portfolio = (() => {
         
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
-                if (DOM.shortcutOverlay && !DOM.shortcutOverlay.classList.contains('hidden')) {
-                    toggleShortcutHelp();
-                } else if (!DOM.modal.classList.contains('hidden')) {
-                    closeModal();
-                }
+                if (DOM.shortcutOverlay && !DOM.shortcutOverlay.classList.contains('hidden')) toggleShortcutHelp();
+                else if (!DOM.modal.classList.contains('hidden')) closeModal();
             }
             if (DOM.modal.classList.contains('hidden')) return;
             if (e.key === 'ArrowRight') nextPhoto(); 
@@ -233,7 +228,12 @@ window.Portfolio = (() => {
         if (!DOM.modal.classList.contains('hidden') && state.activePost) renderActiveSlide();
     };
 
-    const getTrans = (obj) => (typeof obj === 'string') ? obj : (obj[state.lang] || obj['ko'] || '');
+    // [수정] 다국어 JSON(객체) 처리 시 null 에러를 완벽히 방지하도록 개선
+    const getTrans = (obj) => {
+        if (!obj) return '';
+        if (typeof obj === 'string') return obj;
+        return obj[state.lang] || obj['ko'] || obj['en'] || '';
+    };
 
     const getFilteredPosts = () => {
         return state.posts.filter(p => {
@@ -269,13 +269,14 @@ window.Portfolio = (() => {
             card.style.transitionDelay = `${(index % 6) * 100}ms`;
             const catTranslation = window.I18N[state.lang][`cat${post.category}`] || post.category;
 
-            // [추가] Blur-up 효과: 처음엔 블러된 상태로 시작, 로드가 완료되면 JS로 블러를 품
             card.innerHTML = `
                 <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500 bg-gray-200 dark:bg-gray-800" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
-                    <!-- Blur Placeholder Skeleton -->
                     <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-[1.5s]"></div>
-                    <!-- Actual Image with progressive fade-in -->
                     <img crossorigin="anonymous" loading="lazy" class="grid-img absolute inset-0 w-full h-full object-cover transform scale-110 blur-xl opacity-0 transition-all duration-[1.2s] ease-out z-10 group-hover:scale-105">
+                    
+                    <!-- 앨범 표시 뱃지 (여러 장일 경우) -->
+                    ${post.photos.length > 1 ? `<div class="absolute top-4 right-4 z-20 bg-black/50 backdrop-blur-md rounded-full px-3 py-1 text-white text-xs font-bold border border-white/20 flex items-center gap-1 shadow-lg"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>${post.photos.length}</div>` : ''}
+                    
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 md:p-8 z-20">
                         <span class="text-xs md:text-sm font-bold tracking-[0.2em] text-white/80 uppercase mb-2">${catTranslation}</span>
                         <h4 class="text-white font-semibold text-xl md:text-2xl leading-snug drop-shadow-md">${getTrans(post.title)}</h4>
@@ -286,15 +287,19 @@ window.Portfolio = (() => {
             const imgEl = card.querySelector('.grid-img');
             const skeleton = card.querySelector('.skeleton-bg');
 
-            // [추가] 이미지가 로딩 완료되었을 때 실행되는 Blur-up 해제 로직
-            imgEl.onload = () => {
+            const initGridVisuals = () => {
                 imgEl.classList.remove('scale-110', 'blur-xl', 'opacity-0');
                 imgEl.classList.add('scale-100', 'blur-0', 'opacity-90', 'group-hover:opacity-100');
                 if(skeleton) skeleton.style.opacity = '0';
             };
-            
-            // src를 나중에 할당하여 브라우저가 캐싱된 이미지라도 onload 이벤트를 확실히 태우도록 함
+
+            imgEl.onload = initGridVisuals;
             imgEl.src = post.photos[0].url;
+            
+            // 캐시된 이미지의 경우 onload가 안 탈 수 있으므로 수동 체크
+            if (imgEl.complete && imgEl.naturalWidth > 0) {
+                initGridVisuals();
+            }
 
             card.addEventListener('click', () => window.Portfolio.openModal(post));
             DOM.grid.appendChild(card);
@@ -496,15 +501,19 @@ window.Portfolio = (() => {
         history.replaceState(null, '', `#post-${post.id}/photo-${state.currentPhotoIndex}`);
 
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
-        const titleStr = getTrans(photo.title);
+        
+        // [수정] 다국어 JSON 지원 및 예외 처리
+        const titleStr = getTrans(photo.title) || getTrans(post.title); 
         const catTranslation = dict[`cat${post.category}`] || post.category;
 
         DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-3"><span class="text-xs px-2 py-1 rounded border theme-border theme-text-muted font-bold uppercase tracking-wider">${catTranslation}</span><h2 class="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-md">${titleStr}</h2></div>`;
         DOM.modalDots.innerHTML = post.photos.map((_, i) => `<div class="w-1 h-1 rounded-full transition-all duration-300 ${i === state.currentPhotoIndex ? 'bg-white w-3' : 'bg-white/30'}"></div>`).join('');
 
+        // [수정] 셔터스피드 (num/den) 완벽 지원
         const exifArr = [];
         if (photo.exif_focal_length) exifArr.push(`${photo.exif_focal_length}mm`);
         if (photo.exif_aperture) exifArr.push(`f/${parseFloat(photo.exif_aperture)}`);
+        if (photo.exif_shutter_speed_num && photo.exif_shutter_speed_den) exifArr.push(`${photo.exif_shutter_speed_num}/${photo.exif_shutter_speed_den}s`);
         if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
 
         const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
@@ -517,14 +526,12 @@ window.Portfolio = (() => {
         const performRender = () => {
             if (state.currentPhotoIndex !== targetIndex) return;
 
-            // [추가] 모달창 안에서도 Blur-up 적용. 로딩 스피너 대신 배경의 부드러운 스켈레톤과 블러 이미지를 사용
             DOM.modalSliderContent.innerHTML = `
                 <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
                     <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh] rounded-lg overflow-hidden bg-black/10" id="photo-loupe-container">
                         
                         <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
                         
-                        <!-- Blur-up Image -->
                         <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair z-10 relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
 
                         <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
@@ -587,7 +594,7 @@ window.Portfolio = (() => {
                 const skeleton = DOM.modalSliderContent.querySelector('.skeleton-bg');
 
                 if(imgEl && loupeEl && loupeInner) {
-                    // 블러 업을 완성하는 트리거
+                    // [수정] 블러-업 로딩 버그 해결
                     const initVisuals = () => {
                         imgEl.classList.remove('scale-[1.02]', 'blur-lg', 'opacity-0');
                         imgEl.classList.add('scale-100', 'blur-0', 'opacity-100');
@@ -595,10 +602,12 @@ window.Portfolio = (() => {
                         if(skeleton) skeleton.classList.add('opacity-0');
                     };
                     
-                    if (imgEl.complete) {
+                    imgEl.onload = initVisuals;
+                    imgEl.src = photo.url;
+                    loupeInner.src = photo.url;
+
+                    if (imgEl.complete && imgEl.naturalWidth > 0) {
                         initVisuals();
-                    } else {
-                        imgEl.addEventListener('load', initVisuals);
                     }
 
                     imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
@@ -619,12 +628,6 @@ window.Portfolio = (() => {
                     });
                 }
                 
-                // 실제 이미지 URL 삽입 (여기서 로딩 시작)
-                if (imgEl) {
-                    imgEl.src = photo.url;
-                    if (loupeInner) loupeInner.src = photo.url;
-                }
-                
                 if (post.photos.length > 1) {
                     const nextIdx = (targetIndex + 1) % post.photos.length;
                     const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
@@ -640,7 +643,6 @@ window.Portfolio = (() => {
         if (preloader.complete) {
             setTimeout(performRender, 50);
         } else {
-            // 프리로더 대신 화면부터 그려서 블러-업 효과를 바로 볼 수 있게 변경
             performRender();
         }
     };
@@ -750,7 +752,9 @@ window.Portfolio = (() => {
 
             ctx.fillStyle = "#111111";
             ctx.font = `bold ${titleFontSize}px Pretendard, -apple-system, sans-serif`;
-            const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
+            
+            // [수정] 프레임 생성 시 다국어 제목 완벽 지원
+            const title = getTrans(photo.title) || getTrans(post.title);
             ctx.fillText(title, px, textYOffset);
 
             const exifArr = [];
@@ -758,6 +762,7 @@ window.Portfolio = (() => {
             if (photo.exif_lens) exifArr.push(photo.exif_lens);
             if (photo.exif_focal_length) exifArr.push(`${photo.exif_focal_length}mm`);
             if (photo.exif_aperture) exifArr.push(`f/${parseFloat(photo.exif_aperture)}`);
+            if (photo.exif_shutter_speed_num && photo.exif_shutter_speed_den) exifArr.push(`${photo.exif_shutter_speed_num}/${photo.exif_shutter_speed_den}s`);
             if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
 
             ctx.fillStyle = "#666666";
@@ -782,7 +787,7 @@ window.Portfolio = (() => {
 
     const sharePhoto = () => {
         const photo = state.activePost.photos[state.currentPhotoIndex];
-        const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
+        const title = getTrans(photo.title) || getTrans(state.activePost.title);
         const postUrl = `${window.location.origin}${window.location.pathname}#post-${state.activePost.id}/photo-${state.currentPhotoIndex}`;
 
         if (navigator.share) { navigator.share({ title: `PHOTO - ${title}`, url: postUrl }); }
