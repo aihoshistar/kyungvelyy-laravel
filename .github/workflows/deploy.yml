@@ -55,7 +55,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./deploy/
+          local-dir: ./
           # Hostinger의 라라벨 프로젝트 루트 경로를 입력하세요.
           # 보통 상위 폴더에 두고 public_html을 매핑했다면 해당 경로 입력
           server-dir: ./
