@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'kakao' => [
+        'map_key' => env('KAKAO_MAP_KEY'),
+    ],
+    'google' => [
+        'map_key' => env('GOOGLE_MAP_KEY'),
+    ],
 ];
