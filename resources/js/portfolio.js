@@ -57,7 +57,6 @@ window.Portfolio = (() => {
         updateLanguage(state.lang);
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
 
-        // [추가] 딥링크(Deep Link) 확인 및 모달 자동 열기
         checkUrlHash();
     };
 
@@ -101,11 +100,41 @@ window.Portfolio = (() => {
                 if (state.viewMode === 'grid') renderGrid(); else renderMapMarkers();
             });
         });
+        
         DOM.modal.addEventListener('click', (e) => { if (e.target === DOM.modal) closeModal(); });
+        
         document.addEventListener('keydown', e => {
             if (DOM.modal.classList.contains('hidden')) return;
-            if (e.key === 'ArrowRight') nextPhoto(); if (e.key === 'ArrowLeft') prevPhoto(); if (e.key === 'Escape') closeModal();
+            if (e.key === 'ArrowRight') nextPhoto(); 
+            if (e.key === 'ArrowLeft') prevPhoto(); 
+            if (e.key === 'Escape') closeModal();
         });
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        DOM.modalContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        DOM.modalContainer.addEventListener('touchend', (e) => {
+            if (DOM.modal.classList.contains('hidden') || !state.activePost) return;
+            
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+            
+            const xDiff = touchStartX - touchEndX;
+            const yDiff = touchStartY - touchEndY;
+
+            if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 50) {
+                if (xDiff > 0) {
+                    nextPhoto();
+                } else {
+                    prevPhoto();
+                }
+            }
+        }, { passive: true });
     };
 
     const initTheme = () => {
@@ -278,7 +307,6 @@ window.Portfolio = (() => {
         }
     };
 
-    // [추가] URL Hash 검사하여 모달 바로 열기 (Deep Link 처리)
     const checkUrlHash = () => {
         const hash = window.location.hash;
         if (hash.startsWith('#post-')) {
@@ -288,7 +316,7 @@ window.Portfolio = (() => {
 
             const targetPost = state.posts.find(p => p.id == postId);
             if (targetPost) {
-                setTimeout(() => openModal(targetPost, photoIndex), 500); // 렌더링 후 약간의 딜레이로 부드럽게 열림
+                setTimeout(() => openModal(targetPost, photoIndex), 500);
             }
         }
     };
@@ -339,7 +367,6 @@ window.Portfolio = (() => {
         }
     };
 
-    // [수정] initialIndex를 매개변수로 받아 딥링크 호환성 추가
     const openModal = (post, initialIndex = 0) => {
         state.activePost = post;
         state.currentPhotoIndex = initialIndex;
@@ -358,7 +385,6 @@ window.Portfolio = (() => {
     const closeModal = () => {
         DOM.modalContainer.classList.add('scale-95'); DOM.modal.classList.add('opacity-0');
 
-        // URL Hash 초기화
         history.replaceState(null, '', window.location.pathname + window.location.search);
 
         setTimeout(() => {
@@ -370,13 +396,15 @@ window.Portfolio = (() => {
     };
 
     const nextPhoto = () => {
-        if (!state.activePost) return; state.currentPhotoIndex = (state.currentPhotoIndex + 1) % state.activePost.photos.length;
+        if (!state.activePost || state.activePost.photos.length <= 1) return; 
+        state.currentPhotoIndex = (state.currentPhotoIndex + 1) % state.activePost.photos.length;
         DOM.modalContainer.style.background = 'var(--color-surface)';
         renderActiveSlide(); fetchReactions(state.activePost.photos[state.currentPhotoIndex].id);
     };
 
     const prevPhoto = () => {
-        if (!state.activePost) return; state.currentPhotoIndex = (state.currentPhotoIndex - 1 + state.activePost.photos.length) % state.activePost.photos.length;
+        if (!state.activePost || state.activePost.photos.length <= 1) return; 
+        state.currentPhotoIndex = (state.currentPhotoIndex - 1 + state.activePost.photos.length) % state.activePost.photos.length;
         DOM.modalContainer.style.background = 'var(--color-surface)';
         renderActiveSlide(); fetchReactions(state.activePost.photos[state.currentPhotoIndex].id);
     };
@@ -385,7 +413,6 @@ window.Portfolio = (() => {
         const post = state.activePost; const photo = post.photos[state.currentPhotoIndex]; if (!photo) return;
         const dict = window.I18N[state.lang];
 
-        // URL 주소창 딥링크 반영
         history.replaceState(null, '', `#post-${post.id}/photo-${state.currentPhotoIndex}`);
 
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
@@ -403,99 +430,132 @@ window.Portfolio = (() => {
 
         const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
         
-        // [수정] 복잡한 문자열 치환(safePhotoData 등)을 전부 삭제했습니다.
+        DOM.modalSliderContent.style.transition = 'opacity 0.2s ease-in-out';
+        DOM.modalSliderContent.style.opacity = '0';
         
-        DOM.modalSliderContent.innerHTML = `
-            <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter relative overflow-hidden">
-                <div class="relative inline-block max-w-full max-h-full" id="photo-loupe-container">
-                    <img id="active-photo-img" crossorigin="anonymous" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair">
+        const targetIndex = state.currentPhotoIndex;
+        
+        const performRender = () => {
+            if (state.currentPhotoIndex !== targetIndex) return;
 
-                    <div id="photo-loupe" class="loupe hidden md:block overflow-hidden">
-                        <img id="loupe-inner-img" crossorigin="anonymous" src="${photo.url}" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
-                    </div>
+            // [핵심 수정] 사진이 들어가는 컨테이너(id="photo-loupe-container")에 최소 높이(min-h-[40vh] md:min-h-[60vh])를 부여하여 레이아웃 무너짐 방지
+            DOM.modalSliderContent.innerHTML = `
+                <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
+                    <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh]" id="photo-loupe-container">
+                        <!-- 이미지 로딩 중 공간을 유지하는 플레이스홀더 스켈레톤 (선택적) -->
+                        <div class="absolute inset-0 flex items-center justify-center text-white/20">
+                            <svg class="animate-spin h-8 w-8 hidden placeholder-loader" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                        <img id="active-photo-img" crossorigin="anonymous" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair z-10 relative">
 
-                    <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
-                        <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
-                        <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
-                        <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
-                        <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
-                    </div>
-                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-50" title="3x3 구도 보기">
-                        <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="w-full md:w-[35%] flex flex-col justify-center p-8 md:p-10 space-y-8 slide-fade-enter overflow-y-auto">
-                <div class="space-y-4">
-                    <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
-                    <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
-                </div>
+                        <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
+                            <img id="loupe-inner-img" crossorigin="anonymous" src="${photo.url}" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
+                        </div>
 
-                <div class="space-y-3">
-                    <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
-                    <div id="color-palette-container" class="flex gap-3">
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 z-30 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
+                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
+                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
+                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
+                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
+                        </div>
+                        <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-40" title="3x3 구도 보기">
+                            <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
+                        </button>
                     </div>
                 </div>
+                <div class="w-full md:w-[35%] flex flex-col justify-center p-6 md:p-10 space-y-8">
+                    <div class="space-y-4">
+                        <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
+                        <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
+                    </div>
 
-                <div class="flex flex-wrap gap-2 pt-2">
-                    ${reactions.map(r => {
-                        const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
-                        const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
-                        return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
-                    }).join('')}
+                    <div class="space-y-3">
+                        <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
+                        <div id="color-palette-container" class="flex gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        ${reactions.map(r => {
+                            const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
+                            const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
+                            return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
+                        }).join('')}
+                    </div>
+                    <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
+                        <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
+                        <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
+                        <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
+                    </div>
+                    <div class="flex gap-3 pt-4 pb-10 md:pb-0">
+                        <button onclick="window.Portfolio.downloadFramedPhoto()" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
+                        <button onclick="window.Portfolio.sharePhoto()" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
+                    </div>
                 </div>
-                <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
-                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
-                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
-                    <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <!-- [수정] onclick에 인자를 넘기지 않고 함수만 호출하도록 아주 깔끔하게 변경했습니다. -->
-                    <button onclick="window.Portfolio.downloadFramedPhoto()" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
-                    <button onclick="window.Portfolio.sharePhoto()" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
-                </div>
-            </div>
-        `;
+            `;
 
-        requestAnimationFrame(() => {
-            Array.from(DOM.modalSliderContent.children).forEach(child => {
-                child.classList.remove('slide-fade-enter');
-                child.classList.add('slide-fade-active');
-            });
+            requestAnimationFrame(() => {
+                void DOM.modalSliderContent.offsetWidth;
+                DOM.modalSliderContent.style.opacity = '1';
 
-            const imgEl = document.getElementById('active-photo-img');
-            const loupeEl = document.getElementById('photo-loupe');
-            const loupeInner = document.getElementById('loupe-inner-img');
+                const imgEl = document.getElementById('active-photo-img');
+                const loupeEl = document.getElementById('photo-loupe');
+                const loupeInner = document.getElementById('loupe-inner-img');
+                const loader = DOM.modalSliderContent.querySelector('.placeholder-loader');
 
-            if(imgEl && loupeEl && loupeInner) {
-                if (imgEl.complete) {
-                    applyColorFeatures(imgEl);
-                } else {
-                    imgEl.addEventListener('load', () => applyColorFeatures(imgEl));
+                if(imgEl && loupeEl && loupeInner) {
+                    const initVisuals = () => {
+                        applyColorFeatures(imgEl);
+                        if(loader) loader.classList.add('hidden');
+                    };
+                    
+                    if (imgEl.complete) {
+                        initVisuals();
+                    } else {
+                        if(loader) loader.classList.remove('hidden');
+                        imgEl.addEventListener('load', initVisuals);
+                    }
+
+                    imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
+                    imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
+                    imgEl.addEventListener('mousemove', (e) => {
+                        const rect = imgEl.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+
+                        loupeEl.style.left = `${x}px`;
+                        loupeEl.style.top = `${y}px`;
+
+                        const zoom = 2.5;
+                        loupeInner.style.width = `${rect.width * zoom}px`;
+                        loupeInner.style.height = `${rect.height * zoom}px`;
+                        loupeInner.style.left = `${90 - (x * zoom)}px`;
+                        loupeInner.style.top = `${90 - (y * zoom)}px`;
+                    });
                 }
+                
+                if (post.photos.length > 1) {
+                    const nextIdx = (targetIndex + 1) % post.photos.length;
+                    const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
+                    new Image().src = post.photos[nextIdx].url;
+                    new Image().src = post.photos[prevIdx].url;
+                }
+            });
+        };
 
-                imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
-                imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
-                imgEl.addEventListener('mousemove', (e) => {
-                    const rect = imgEl.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    loupeEl.style.left = `${x}px`;
-                    loupeEl.style.top = `${y}px`;
-
-                    const zoom = 2.5;
-                    loupeInner.style.width = `${rect.width * zoom}px`;
-                    loupeInner.style.height = `${rect.height * zoom}px`;
-                    loupeInner.style.left = `${90 - (x * zoom)}px`;
-                    loupeInner.style.top = `${90 - (y * zoom)}px`;
-                });
-            }
-        });
+        const preloader = new Image();
+        preloader.src = photo.url;
+        
+        if (preloader.complete) {
+            setTimeout(performRender, 50);
+        } else {
+            preloader.onload = performRender;
+            preloader.onerror = performRender; 
+        }
     };
 
     const clearMapMarkers = () => {
@@ -560,9 +620,7 @@ window.Portfolio = (() => {
         setTimeout(() => { DOM.toast.classList.add('opacity-0', 'translate-y-10'); }, 3000);
     };
 
-    // [수정] 매개변수(인자)를 받지 않고, 내부 state에서 직접 데이터를 꺼내 쓰도록 변경
     const downloadFramedPhoto = () => {
-        // 에러를 유발하던 JSON 파싱을 없애고 state에서 바로 현재 사진 객체를 가져옵니다.
         const post = state.activePost;
         const photo = post.photos[state.currentPhotoIndex];
         const postUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}/photo-${state.currentPhotoIndex}`;
@@ -576,21 +634,18 @@ window.Portfolio = (() => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            // 이미지 크기에 비례하여 동적으로 여백(마진) 계산
             const margin = Math.max(120, img.width * 0.05);
             const pt = margin;
             const px = margin;
-            const pb = margin * 3.5; // 하단 텍스트 및 QR이 들어갈 여유 공간
+            const pb = margin * 3.5;
 
             canvas.width = img.width + (px * 2);
             canvas.height = img.height + pt + pb;
 
-            // 흰색 배경 및 원본 이미지 삽입
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, px, pt, img.width, img.height);
 
-            // 3x3 그리드가 활성화되어 있다면 프레임에도 그려줍니다.
             if (state.isGridActive) {
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
                 ctx.lineWidth = Math.max(2, img.width * 0.002);
@@ -602,18 +657,15 @@ window.Portfolio = (() => {
                 ctx.stroke();
             }
 
-            // 텍스트 비율 동적 계산
             const titleFontSize = Math.max(40, img.width * 0.025);
             const exifFontSize = Math.max(24, img.width * 0.015);
             const textYOffset = pt + img.height + margin * 1.2;
 
-            // 1. 제목 그리기
             ctx.fillStyle = "#111111";
             ctx.font = `bold ${titleFontSize}px Pretendard, -apple-system, sans-serif`;
             const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
             ctx.fillText(title, px, textYOffset);
 
-            // 2. EXIF 메타데이터 그리기 (카메라, 렌즈, ISO 등)
             const exifArr = [];
             if (photo.exif_body) exifArr.push(photo.exif_body);
             if (photo.exif_lens) exifArr.push(photo.exif_lens);
@@ -625,7 +677,6 @@ window.Portfolio = (() => {
             ctx.font = `400 ${exifFontSize}px Pretendard, -apple-system, sans-serif`;
             ctx.fillText(exifArr.join('  |  '), px, textYOffset + titleFontSize * 1.5);
 
-            // 3. QR 코드 그리기 (딥링크 연동)
             const qrSize = margin * 1.8;
             const qr = new QRious({ value: postUrl, size: qrSize, level: 'H' });
             const qrImg = new Image();
@@ -634,19 +685,14 @@ window.Portfolio = (() => {
             qrImg.onload = () => {
                 ctx.drawImage(qrImg, canvas.width - px - qrSize, pt + img.height + margin * 0.6, qrSize, qrSize);
                 const link = document.createElement('a');
-                
-                // [수정] 다운로드 파일명을 깔끔한 영문 조합으로 설정
-                // 예: kkyung_photo_seoul_tower_1.jpg
                 const cleanSlug = post.slug ? post.slug.replace(/[^a-zA-Z0-9-]/g, '') : 'post';
                 link.download = state.isGridActive ? `kkyung_photo_grid_${cleanSlug}_${photo.id}.jpg` : `kkyung_photo_${cleanSlug}_${photo.id}.jpg`;
-                
                 link.href = canvas.toDataURL("image/jpeg", 0.95);
                 link.click();
             };
         };
     };
 
-    // [수정] 매개변수 없이 내부 state를 사용하도록 변경
     const sharePhoto = () => {
         const photo = state.activePost.photos[state.currentPhotoIndex];
         const title = typeof photo.title === 'string' ? photo.title : (photo.title[state.lang] || photo.title['ko'] || '');
