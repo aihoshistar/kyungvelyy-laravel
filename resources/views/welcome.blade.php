@@ -42,7 +42,7 @@
         // 데이터 주입
         window.PORTFOLIO_DATA = {!! json_encode($posts ?? []) !!};
 
-        // API 키 할당 (오타 수정됨)
+        // API 키 할당
         window.KAKAO_MAP_API_KEY = '{{ config('services.kakao.map_key') }}';
         window.GOOGLE_MAP_API_KEY = '{{ config('services.google.map_key') }}';
 
@@ -182,7 +182,7 @@
             const i18n = {
                 ko: { navGallery: '갤러리', heroName: 'Park Kyoung Seo', heroRole: '블록체인 인프라 엔지니어 & 사진작가', heroCatchphrase: '구조를 설계하고,<br>균형을 기록합니다.', heroDesc: '개발자로 일하며 구조와 흐름을 설계하고, 여행지와 도시에서는 빛과 공간의 균형을 기록합니다.', galleryTitle: '사진 작업', mapTitle: '촬영 위치', catAll: '전체보기', catLandscape: '자연·풍경', catCityscape: '도시·건축', exifCamera: '카메라', exifLens: '렌즈', btnShare: '공유하기', btnDownload: '프레임 저장', toastCopy: '링크가 클립보드에 복사되었습니다.', toastWait: '이미지를 렌더링 중입니다...' },
                 en: { navGallery: 'Gallery', heroName: 'Park Kyoung Seo', heroRole: 'Blockchain Infra Engineer & Photographer', heroCatchphrase: 'Architecting Systems,<br>Documenting Balance.', heroDesc: 'As a developer, I design structures and flows. In cities and nature, I record the balance of light and space.', galleryTitle: 'Selected Works', mapTitle: 'Locations', catAll: 'All', catLandscape: 'Landscape', catCityscape: 'Cityscape', exifCamera: 'Camera', exifLens: 'Lens', btnShare: 'Share', btnDownload: 'Save Frame', toastCopy: 'Link copied to clipboard.', toastWait: 'Generating image...' },
-                ja: { navGallery: 'ギャラリー', heroName: 'Park Kyoung Seo', heroRole: 'ブロックチェーン인프라엔지니어 & 사진가', heroCatchphrase: '構造を設計し、<br>均衡を記録します。', heroDesc: '開発者として構造とフローを設計し、旅先や都市では光と空間のバランスを記録します。', galleryTitle: '사진 작품', mapTitle: '촬영 장소', catAll: 'すべて', catLandscape: '風景·自然', catCityscape: '都市·建築', exifCamera: '카메라', exifLens: '렌즈', btnShare: '공유하기', btnDownload: '저장', toastCopy: '링크가 클립보드에 복사되었습니다.', toastWait: '이미지를 렌더링 중입니다...' }
+                ja: { navGallery: 'ギャラリー', heroName: 'Park Kyoung Seo', heroRole: 'ブロックチェーン인프라엔지니어 & 사진가', heroCatchphrase: '構造を設計し、<br>均衡を記録します。', heroDesc: '開発者として構造とフローを設計し、旅先や都市では光と空間のバランスを記録します。', galleryTitle: '사진 작품', mapTitle: '촬영 장소', catAll: 'すべて', catLandscape: '風景·自然', catCityscape: '도시·건축', exifCamera: '카메라', exifLens: '렌즈', btnShare: '공유하기', btnDownload: '저장', toastCopy: '링크가 클립보드에 복사되었습니다.', toastWait: '이미지를 렌더링 중입니다...' }
             };
 
             const DOM = {
@@ -387,9 +387,22 @@
 
                 posts.forEach(post => {
                     if (!post.lat || !post.photos?.length) return;
+
+                    // 문자열 기반 onclick 대신 DOM 요소를 직접 생성하여 클릭 이벤트 리스너를 바인딩합니다.
+                    const markerPosition = new kakao.maps.LatLng(post.lat, post.lng);
+                    const content = document.createElement('div');
+                    content.className = 'w-12 h-12 rounded-full border-2 border-white shadow-xl cursor-pointer bg-cover bg-center transition-transform hover:scale-110';
+                    content.style.backgroundImage = `url(${post.photos[0].url})`;
+
+                    // 상위 모듈의 openModal 함수를 직접 호출하여 스코프 문제를 해결합니다.
+                    content.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openModal(post);
+                    });
+
                     new kakao.maps.CustomOverlay({
-                        position: new kakao.maps.LatLng(post.lat, post.lng),
-                        content: `<div class="w-12 h-12 rounded-full border-2 border-white shadow-xl cursor-pointer bg-cover bg-center" style="background-image: url(${post.photos[0].url})" onclick="Portfolio.triggerOpenModal('${post.id}')"></div>`,
+                        position: markerPosition,
+                        content: content,
                         yAnchor: 1.2
                     }).setMap(state.mapInstance);
                 });
@@ -407,7 +420,7 @@
             };
 
             const renderMapMarkers = () => { if(state.viewMode === 'map') initHybridMap(); };
-            const triggerOpenModal = (postId) => { const post = state.posts.find(p => p.id === postId); if(post) openModal(post); };
+
             const formatExif = (photo) => {
                 const parts = [];
                 if (photo.exif_focal_length) parts.push(`${photo.exif_focal_length}mm`);
@@ -462,7 +475,7 @@
                 requestAnimationFrame(() => { Array.from(DOM.modalSliderContent.children).forEach(child => { child.classList.remove('slide-fade-enter'); child.classList.add('slide-fade-active'); }); });
             };
 
-            return { init, switchView, closeModal, nextPhoto, prevPhoto, downloadFramedPhoto, sharePhoto, triggerOpenModal };
+            return { init, switchView, closeModal, nextPhoto, prevPhoto, downloadFramedPhoto, sharePhoto };
         })();
 
         document.addEventListener('DOMContentLoaded', Portfolio.init);
