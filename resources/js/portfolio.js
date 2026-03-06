@@ -1,12 +1,14 @@
 window.Portfolio = (() => {
     let state = {
-        lang: 'ko', category: 'all', posts: window.PORTFOLIO_DATA || [], activePost: null, currentPhotoIndex: 0,
-        viewMode: 'grid', mapInstance: null, mapLoaded: { kakao: false, google: false }, fingerprint: null
-    };
-
-    const i18n = {
-        ko: { heroBioLead: 'Architecting Invisible Foundations', heroName: 'Park Kyoung Seo', toastCopy: '링크가 복사되었습니다.' },
-        en: { heroBioLead: 'Architecting Invisible Foundations', heroName: 'Park Kyoung Seo', toastCopy: 'Link copied.' }
+        lang: window.CURRENT_LOCALE || 'ko', // Laravel 로케일 상속
+        category: 'all',
+        posts: window.PORTFOLIO_DATA || [],
+        activePost: null,
+        currentPhotoIndex: 0,
+        viewMode: 'grid',
+        mapInstance: null,
+        mapLoaded: { kakao: false, google: false },
+        fingerprint: null
     };
 
     let DOM = {};
@@ -71,14 +73,22 @@ window.Portfolio = (() => {
 
     const updateLanguage = (lang) => {
         state.lang = lang;
+        // 언어 버튼 스타일 업데이트
         DOM.langBtns.forEach(btn => {
             btn.classList.toggle('theme-text', btn.dataset.lang === lang);
             btn.classList.toggle('font-bold', btn.dataset.lang === lang);
             btn.classList.toggle('theme-text-muted', btn.dataset.lang !== lang);
         });
+
+        // 텍스트 교체 (window.I18N 활용)
+        const currentDictionary = window.I18N[lang];
         document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.dataset.i18n; if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
+            const key = el.dataset.i18n;
+            if (currentDictionary && currentDictionary[key]) {
+                el.innerHTML = currentDictionary[key];
+            }
         });
+
         if (state.viewMode === 'grid') renderGrid(); else renderMapMarkers();
         if (!DOM.modal.classList.contains('hidden') && state.activePost) renderActiveSlide();
     };
@@ -108,22 +118,23 @@ window.Portfolio = (() => {
             const card = document.createElement('div');
             card.className = 'photo-card cursor-pointer group reveal active w-full break-inside-avoid relative inline-block mb-6';
             card.style.transitionDelay = `${(index % 6) * 100}ms`;
+
+            const catTranslation = window.I18N[state.lang][`cat${post.category}`] || post.category;
+
             card.innerHTML = `
                 <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
                     <img src="${post.photos[0].url}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
-                        <span class="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase mb-2">${post.category}</span>
-                        <h4 class="text-white font-medium text-lg leading-snug">${getTrans(post.title)}</h4>
+                        <span class="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase mb-2">${catTranslation}</span>
+                        <h4 class="text-white font-medium text-lg leading-snug drop-shadow-lg">${getTrans(post.title)}</h4>
                     </div>
                 </div>
             `;
-            // [문제 1 해결] 동적 요소 생성 시 openModal 이벤트 안전하게 바인딩
             card.addEventListener('click', () => window.Portfolio.openModal(post));
             DOM.grid.appendChild(card);
         });
     };
 
-    // [문제 3 해결] 반응 데이터 GET API 연동
     const fetchReactions = async (photoId) => {
         try {
             const response = await fetch(`/api/photos/${photoId}/reactions`, { headers: { 'Accept': 'application/json' } });
@@ -131,13 +142,11 @@ window.Portfolio = (() => {
                 const data = await response.json();
                 const photo = state.activePost.photos[state.currentPhotoIndex];
                 if (photo && photo.id === photoId) {
-                    photo.reaction_counts = data.counts; // 최신 카운트로 동기화
+                    photo.reaction_counts = data.counts;
                     renderActiveSlide();
                 }
             }
-        } catch (e) {
-            console.log('Reactions GET API not ready yet.');
-        }
+        } catch (e) { console.log('Reactions fetch skipped'); }
     };
 
     const handleReaction = async (type, photoId) => {
@@ -147,7 +156,6 @@ window.Portfolio = (() => {
         const photo = state.activePost.photos[state.currentPhotoIndex];
         if (!photo.reaction_counts) photo.reaction_counts = {};
 
-        // Optimistic UI 업데이트 (즉각적인 피드백)
         if (hasReacted) { photo.reaction_counts[type] = Math.max(0, (photo.reaction_counts[type] || 1) - 1); localStorage.removeItem(storageKey); }
         else { photo.reaction_counts[type] = (photo.reaction_counts[type] || 0) + 1; localStorage.setItem(storageKey, 'true'); }
         renderActiveSlide();
@@ -160,17 +168,15 @@ window.Portfolio = (() => {
             });
             if (response.ok) {
                 const data = await response.json();
-                photo.reaction_counts = data.counts; // 서버 데이터로 보정
+                photo.reaction_counts = data.counts;
                 renderActiveSlide();
             }
         } catch (e) { console.error('Reaction sync failed'); }
     };
 
     const openModal = (post) => {
-        state.activePost = post; state.currentPhotoIndex = 0;
-        renderActiveSlide();
-        fetchReactions(post.photos[0].id); // 모달 열릴 때 최신 반응 로드
-
+        state.activePost = post; state.currentPhotoIndex = 0; renderActiveSlide();
+        fetchReactions(post.photos[0].id);
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
         DOM.modalContainer.classList.remove('scale-95');
@@ -193,10 +199,14 @@ window.Portfolio = (() => {
 
     const renderActiveSlide = () => {
         const post = state.activePost; const photo = post.photos[state.currentPhotoIndex]; if (!photo) return;
+        const dict = window.I18N[state.lang];
+
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
 
         const titleStr = getTrans(photo.title);
-        DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-2"><span class="text-[9px] px-1.5 py-0.5 rounded border theme-border theme-text-muted font-bold uppercase">${post.category}</span><h2 class="text-sm md:text-base font-semibold truncate max-w-[200px]">${titleStr}</h2></div>`;
+        const catTranslation = dict[`cat${post.category}`] || post.category;
+
+        DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-2"><span class="text-[9px] px-1.5 py-0.5 rounded border theme-border theme-text-muted font-bold uppercase">${catTranslation}</span><h2 class="text-sm md:text-base font-semibold truncate max-w-[200px]">${titleStr}</h2></div>`;
         DOM.modalDots.innerHTML = post.photos.map((_, i) => `<div class="w-1 h-1 rounded-full transition-all duration-300 ${i === state.currentPhotoIndex ? 'bg-white w-3' : 'bg-white/30'}"></div>`).join('');
 
         const exifArr = [];
@@ -225,14 +235,17 @@ window.Portfolio = (() => {
                     }).join('')}
                 </div>
                 <div class="pt-6 border-t theme-border grid grid-cols-2 gap-4">
-                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">Camera</span><span class="theme-text text-xs font-medium truncate">${photo.exif_body || '-'}</span></div>
-                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">Lens</span><span class="theme-text text-xs font-medium truncate">${photo.exif_lens || '-'}</span></div>
+                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-xs font-medium truncate">${photo.exif_body || '-'}</span></div>
+                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-xs font-medium truncate">${photo.exif_lens || '-'}</span></div>
                     <div class="col-span-2 flex flex-wrap gap-1.5 pt-1">${exifArr.map(e => `<span class="px-2 py-0.5 bg-surface border theme-border rounded text-[9px] theme-text font-mono">${e}</span>`).join('')}</div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <!-- [문제 2 해결] action-btn 적용 -->
-                    <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn"><span>DOWNLOAD</span></button>
-                    <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn"><span>SHARE</span></button>
+                    <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn">
+                        <span>${dict.btnDownload || 'DOWNLOAD'}</span>
+                    </button>
+                    <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn">
+                        <span>${dict.btnShare || 'SHARE'}</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -290,7 +303,7 @@ window.Portfolio = (() => {
     };
 
     const downloadFramedPhoto = (photoDataStr, postUrl) => {
-        showToast('준비 중입니다...');
+        showToast(window.I18N[state.lang].toastWait || '준비 중입니다...');
         const photo = JSON.parse(photoDataStr); const img = new Image(); img.crossOrigin = "Anonymous"; img.src = photo.url;
         img.onload = () => {
             const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
@@ -304,11 +317,8 @@ window.Portfolio = (() => {
 
     const sharePhoto = (title, imageUrl, postUrl) => {
         if (navigator.share) { navigator.share({ title: `PHOTO - ${title}`, url: postUrl }); }
-        else { navigator.clipboard.writeText(postUrl).then(() => showToast('Link Copied!')); }
+        else { navigator.clipboard.writeText(postUrl).then(() => showToast(window.I18N[state.lang].toastCopy || 'Link Copied!')); }
     };
 
-    // [문제 1 해결] 외부에서 함수 접근 가능하도록 Export
-    return {
-        init, switchView, openModal, closeModal, nextPhoto, prevPhoto, downloadFramedPhoto, sharePhoto, handleReaction
-    };
+    return { init, switchView, openModal, closeModal, nextPhoto, prevPhoto, downloadFramedPhoto, sharePhoto, handleReaction };
 })();
