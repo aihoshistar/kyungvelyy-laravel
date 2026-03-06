@@ -44,8 +44,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/
-          # [수정] 서버의 트리 구조에 맞춰 public_html 폴더로 전송
-          server-dir: public_html/
+          # [핵심 수정] FTP 계정의 기본 루트 경로에 그대로 배포하도록 './' 로 설정합니다.
+          server-dir: ../
           exclude: |
             **/.git*
             **/.git*/**
@@ -59,16 +59,15 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: 22
           script: |
-            # [수정] 이동 경로를 public_html로 변경
-            cd domains/kkyungvelyy.com/public_html
+            # [핵심 수정] 절대 경로를 사용하여 무조건 정확한 위치로 이동합니다.
+            cd /home/u770396890/domains/kkyungvelyy.com
 
-            # [해결책] --no-scripts를 추가하여 설치 단계와 스크립트 실행 단계를 분리합니다.
-            # 기존 vendor가 꼬여있을 수 있으므로 안전을 위해 삭제 후 재설치를 권장할 수 있으나,
-            # 속도를 위해 우선 스크립트 실행만 억제합니다.
+            # 패키지 설치 (오류 방지를 위해 스크립트 분리)
             composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-            # 수동으로 패키지 발견 및 캐시 최적화 실행
+            # 라라벨 최적화 및 DB 마이그레이션
             php artisan package:discover --ansi
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+            php artisan migrate --force
