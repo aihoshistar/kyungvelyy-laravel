@@ -15,3 +15,4 @@ use App\Http\Controllers\PostController;
 */
 
 Route::get('/', [PostController::class, 'index'])->name('home');
+Route::post('/api/photos/{photo}/react', [PostController::class, 'toggleReaction']);

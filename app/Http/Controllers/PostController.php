@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\Photo;
 use Illuminate\Http\Request;
 
 class PostController extends Controller
@@ -18,6 +19,26 @@ class PostController extends Controller
         // 데이터를 프론트엔드의 JS 변수로 온전히 넘기기 위해 JSON으로 캐스팅합니다.
         return view('welcome', [
             'posts' => $posts
+        ]);
+    }
+
+    public function toggleReaction(Request $request, Photo $photo) {
+        $type = $request->input('type');
+        $fingerprint = $request->input('fingerprint');
+
+        $reaction = $photo->reactions()->where('type', $type)->where('fingerprint', $fingerprint)->first();
+
+        if ($reaction) {
+            $reaction->delete();
+            $status = 'removed';
+        } else {
+            $photo->reactions()->create(['type' => $type, 'fingerprint' => $fingerprint]);
+            $status = 'added';
+        }
+
+        return response()->json([
+            'status' => $status,
+            'counts' => $photo->reaction_counts // 최신 카운트 반환
         ]);
     }
 

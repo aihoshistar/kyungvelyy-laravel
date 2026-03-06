@@ -3,6 +3,7 @@
 
 /* JIT 컴파일러가 JS 문자열 안의 클래스도 스캔하도록 경로 강제 지정 */
 @source "../views";
+@source "../js";
 
 /* 1. 기본 설정 및 테마 변수 (Base) */
 @layer base {
@@ -52,7 +53,6 @@
 
 /* 2. 컴포넌트 유틸리티 (Components & Utilities) */
 @layer utilities {
-    /* 테마 유틸리티 클래스 */
     .theme-bg { background-color: var(--color-bg); }
     .theme-surface { background-color: var(--color-surface); }
     .theme-nav { background-color: var(--color-nav-bg); }
@@ -66,21 +66,46 @@
     .theme-filter-inactive { background-color: var(--color-btn-inactive-bg); color: var(--color-text-muted); border-color: var(--color-border); }
     .theme-filter-inactive:hover { color: var(--color-text-main); border-color: var(--color-text-muted); }
 
-    /* 애니메이션 및 마스크 */
+    /* 모달 및 스크롤 애니메이션 */
     .ease-spring { transition-timing-function: var(--ease-spring); }
-
-    .reveal {
-        opacity: 0;
-        transform: translateY(30px);
-        transition: opacity 0.8s var(--ease-spring), transform 0.8s var(--ease-spring);
-    }
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.8s var(--ease-spring), transform 0.8s var(--ease-spring); }
     .reveal.active { opacity: 1; transform: translateY(0); }
+    .slide-fade-enter { opacity: 0; transform: translateX(20px); }
+    .slide-fade-active { opacity: 1; transform: translateX(0); transition: all 0.6s var(--ease-spring); }
+    .view-transition { transition: opacity 0.5s var(--ease-spring); }
 
-    .img-mask {
-        clip-path: inset(0 0 0 0 round 0.75rem);
-        transition: clip-path 0.5s var(--ease-spring);
+    /* 이미지 마스크 효과 */
+    .img-mask { clip-path: inset(0 0 0 0 round 0.75rem); transition: clip-path 0.5s var(--ease-spring); }
+    .photo-card:hover .img-mask { clip-path: inset(0.5rem 0.5rem 0.5rem 0.5rem round 0.5rem); }
+
+    /* 반응 버튼 (Reaction Button) */
+    .reaction-btn {
+        transition: all 0.2s var(--ease-spring);
+        border: 1px solid var(--color-border);
+        @apply flex items-center space-x-2 px-3 py-1.5 rounded-full;
     }
-    .photo-card:hover .img-mask {
-        clip-path: inset(0.5rem 0.5rem 0.5rem 0.5rem round 0.5rem);
+    .reaction-btn.active { background: var(--color-text-main); border-color: var(--color-text-main); }
+    .reaction-btn.active span { color: var(--color-bg) !important; }
+
+    /* 액션 버튼 (Download / Share) - 시인성 반전 호버 효과 */
+    .action-btn {
+        @apply flex-1 flex items-center justify-center py-3 rounded-xl border transition-all duration-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer;
+        border-color: var(--color-border);
+        background-color: var(--color-surface);
+        color: var(--color-text-main);
     }
+    .action-btn:hover {
+        background-color: var(--color-text-main);
+        color: var(--color-bg) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -10px rgba(0,0,0,0.2);
+    }
+    .dark .action-btn:hover { box-shadow: 0 10px 20px -10px rgba(255,255,255,0.1); }
+
+    /* 기타 유틸리티 */
+    .bio-lead { font-variant-caps: all-small-caps; letter-spacing: 0.1em; }
+    .text-gradient { background: linear-gradient(to right, var(--color-text-main), var(--color-text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-btn { background-color: rgba(255, 255, 255, 0.05); backdrop-filter: blur(8px); }
+    .dark .nav-btn { background-color: rgba(0, 0, 0, 0.2); }
+    .nav-btn:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(1.1); }
 }

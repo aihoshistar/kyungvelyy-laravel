@@ -71,4 +71,15 @@ class Photo extends Model
         }
         return null;
     }
+
+    public function reactions() {
+        return $this->hasMany(Reaction::class);
+    }
+
+    // 사진별 반응 타입별 갯수를 리턴하는 속성
+    public function getReactionCountsAttribute() {
+        return $this->reactions()->select('type', \DB::raw('count(*) as count'))
+                    ->groupBy('type')->pluck('count', 'type');
+    }
+
 }
