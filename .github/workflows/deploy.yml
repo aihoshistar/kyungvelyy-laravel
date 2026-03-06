@@ -41,12 +41,27 @@ jobs:
       # 운영에 필요 없는 node_modules, tests, readme 등은 서버에 올리지 않습니다.
       - name: Prepare Deployment Files
         run: |
+          # deploy 폴더가 있다면 삭제 후 새로 생성
+          rm -rf deploy
           mkdir -p deploy
-          cp -r ./* ./deploy/
+
+          # rsync를 사용하여 'deploy' 폴더 자체를 제외하고 나머지 모든 파일을 복사
+          # -a: 아카이브 모드, -v: 진행 상황 표시
+          rsync -av --exclude='deploy' . ./deploy/
+
+          # 운영에 필요 없는 파일들 삭제 (용량 및 보안 최적화)
           rm -rf ./deploy/node_modules
           rm -rf ./deploy/tests
           rm -rf ./deploy/.git
           rm -rf ./deploy/.github
+          rm -rf ./deploy/storage/logs/*.log
+
+          # storage 폴더 내 필요한 하위 구조 생성 (파일은 제외)
+          mkdir -p ./deploy/storage/framework/cache/data
+          mkdir -p ./deploy/storage/framework/app/cache
+          mkdir -p ./deploy/storage/framework/sessions
+          mkdir -p ./deploy/storage/framework/views
+          mkdir -p ./deploy/storage/logs
 
       # 6. FTP를 통한 파일 전송 (Hostinger 서버로 업로드)
       - name: Sync Files to Server
