@@ -43,9 +43,9 @@ window.Portfolio = (() => {
         state.fingerprint = id;
 
         const i18nFallback = {
-            ko: { filterAllCountries: '모든 국가', filterAllCameras: '모든 기종' },
-            en: { filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras' },
-            ja: { filterAllCountries: 'すべての国', filterAllCameras: 'すべてのカメラ' }
+            ko: { filterAllCountries: '모든 국가', filterAllCameras: '모든 기종', colorPalette: 'Color Palette' },
+            en: { filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras', colorPalette: 'Color Palette' },
+            ja: { filterAllCountries: 'すべての国', filterAllCameras: 'すべてのカメラ', colorPalette: 'Color Palette' }
         };
         ['ko', 'en', 'ja'].forEach(l => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
@@ -175,7 +175,8 @@ window.Portfolio = (() => {
 
             card.innerHTML = `
                 <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
-                    <img src="${post.photos[0].url}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
+                    <!-- [최적화] 그리드 이미지도 crossorigin 속성을 추가하여 동일한 캐시 사용 강제 -->
+                    <img src="${post.photos[0].url}" crossorigin="anonymous" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
                         <span class="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase mb-2">${catTranslation}</span>
                         <h4 class="text-white font-medium text-lg leading-snug drop-shadow-lg">${getTrans(post.title)}</h4>
@@ -185,6 +186,94 @@ window.Portfolio = (() => {
             card.addEventListener('click', () => window.Portfolio.openModal(post));
             DOM.grid.appendChild(card);
         });
+    };
+
+    const extractPaletteFromImage = (imgEl) => {
+        const defaultColors = [
+            { raw: '#4B5563', glow: 'rgba(75, 85, 99, 0.2)' }, { raw: '#374151', glow: 'rgba(55, 65, 81, 0.2)' },
+            { raw: '#1F2937', glow: 'rgba(31, 41, 55, 0.2)' }, { raw: '#111827', glow: 'rgba(17, 24, 39, 0.2)' }
+        ];
+
+        if (!imgEl.complete || imgEl.naturalWidth === 0) return defaultColors;
+
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            canvas.width = 50; canvas.height = 50;
+            ctx.drawImage(imgEl, 0, 0, 50, 50);
+
+            const data = ctx.getImageData(0, 0, 50, 50).data;
+            const colorCounts = {};
+
+            for (let i = 0; i < data.length; i += 16) {
+                const r = Math.round(data[i] / 10) * 10;
+                const g = Math.round(data[i+1] / 10) * 10;
+                const b = Math.round(data[i+2] / 10) * 10;
+                if(data[i+3] < 255) continue;
+                const rgb = `${r},${g},${b}`;
+                colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
+            }
+
+            const sortedColors = Object.entries(colorCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(entry => {
+                    const [r, g, b] = entry[0].split(',').map(Number);
+                    return { r, g, b };
+                });
+
+            const finalColors = [];
+            const minDistance = 50;
+            const getDistance = (c1, c2) => Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
+
+            for (const color of sortedColors) {
+                if (finalColors.length >= 4) break;
+                let isDistinct = true;
+                for (const existingColor of finalColors) {
+                    if (getDistance(color, existingColor) < minDistance) {
+                        isDistinct = false;
+                        break;
+                    }
+                }
+                if (isDistinct) finalColors.push(color);
+            }
+
+            if (finalColors.length < 4) {
+                for (const color of sortedColors) {
+                    if (finalColors.length >= 4) break;
+                    if (!finalColors.some(c => c.r === color.r && c.g === color.g && c.b === color.b)) {
+                        finalColors.push(color);
+                    }
+                }
+            }
+
+            return finalColors.map(c => ({
+                raw: `rgb(${c.r}, ${c.g}, ${c.b})`,
+                glow: `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`
+            }));
+
+        } catch(e) {
+            console.error("Color extraction failed, using defaults.", e);
+            return defaultColors;
+        }
+    };
+
+    const applyColorFeatures = (imgEl) => {
+        const colors = extractPaletteFromImage(imgEl);
+
+        const paletteContainer = document.getElementById('color-palette-container');
+        if (paletteContainer && colors && colors.length > 0) {
+            paletteContainer.innerHTML = colors.map(c =>
+                `<div class="w-8 h-4 rounded-sm shadow-sm border border-white/10 transition-colors duration-500" style="background-color: ${c.raw};"></div>`
+            ).join('');
+
+            DOM.modalContainer.style.background = `
+                radial-gradient(circle at 10% 10%, ${colors[0]?.glow || 'transparent'} 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, ${colors[1]?.glow || 'transparent'} 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, ${colors[2]?.glow || 'transparent'} 0%, transparent 50%),
+                radial-gradient(circle at 90% 90%, ${colors[3]?.glow || 'transparent'} 0%, transparent 50%),
+                var(--color-surface)
+            `;
+        }
     };
 
     const fetchReactions = async (photoId) => {
@@ -235,7 +324,11 @@ window.Portfolio = (() => {
 
     const openModal = (post) => {
         state.activePost = post; state.currentPhotoIndex = 0; state.isGridActive = false;
-        renderActiveSlide(); fetchReactions(post.photos[0].id);
+
+        DOM.modalContainer.style.background = 'var(--color-surface)';
+
+        renderActiveSlide();
+        fetchReactions(post.photos[0].id);
 
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
@@ -244,16 +337,24 @@ window.Portfolio = (() => {
 
     const closeModal = () => {
         DOM.modalContainer.classList.add('scale-95'); DOM.modal.classList.add('opacity-0');
-        setTimeout(() => { DOM.modal.classList.add('hidden'); document.body.style.overflow = ''; state.activePost = null; }, 500);
+
+        setTimeout(() => {
+            DOM.modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            state.activePost = null;
+            DOM.modalContainer.style.background = 'var(--color-surface)';
+        }, 500);
     };
 
     const nextPhoto = () => {
         if (!state.activePost) return; state.currentPhotoIndex = (state.currentPhotoIndex + 1) % state.activePost.photos.length;
+        DOM.modalContainer.style.background = 'var(--color-surface)';
         renderActiveSlide(); fetchReactions(state.activePost.photos[state.currentPhotoIndex].id);
     };
 
     const prevPhoto = () => {
         if (!state.activePost) return; state.currentPhotoIndex = (state.currentPhotoIndex - 1 + state.activePost.photos.length) % state.activePost.photos.length;
+        DOM.modalContainer.style.background = 'var(--color-surface)';
         renderActiveSlide(); fetchReactions(state.activePost.photos[state.currentPhotoIndex].id);
     };
 
@@ -279,24 +380,21 @@ window.Portfolio = (() => {
         const safePhotoData = JSON.stringify(photo).replace(/"/g, '&quot;');
 
         DOM.modalSliderContent.innerHTML = `
-            <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter bg-black/5 dark:bg-black/20 relative">
-
-                <!-- 이미지를 꽉 안는 컨테이너 -->
+            <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter relative overflow-hidden">
                 <div class="relative inline-block max-w-full max-h-full" id="photo-loupe-container">
-                    <img id="active-photo-img" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair">
+                    <img id="active-photo-img" crossorigin="anonymous" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair">
 
-                    <!-- [추가] 픽셀 돋보기 엘리먼트 (PC 환경에서만 동작) -->
-                    <div id="photo-loupe" class="loupe hidden md:block"></div>
+                    <!-- [최적화] 돋보기를 background-image 방식에서 img 태그 방식으로 변경하여 캐시 활용 -->
+                    <div id="photo-loupe" class="loupe hidden md:block overflow-hidden">
+                        <img id="loupe-inner-img" crossorigin="anonymous" src="${photo.url}" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
+                    </div>
 
-                    <!-- 3x3 그리드 오버레이 -->
                     <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
                     </div>
-
-                    <!-- 토글 버튼 -->
                     <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-50" title="3x3 구도 보기">
                         <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
                     </button>
@@ -307,6 +405,17 @@ window.Portfolio = (() => {
                     <h3 class="text-xl md:text-2xl font-bold theme-text leading-tight">${titleStr}</h3>
                     <p class="theme-text-muted font-light text-sm leading-relaxed">${getTrans(photo.description)}</p>
                 </div>
+
+                <div class="space-y-2.5">
+                    <span class="block text-[9px] theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
+                    <div id="color-palette-container" class="flex gap-2">
+                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                    </div>
+                </div>
+
                 <div class="flex flex-wrap gap-2 pt-2">
                     ${reactions.map(r => {
                         const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
@@ -332,34 +441,36 @@ window.Portfolio = (() => {
                 child.classList.add('slide-fade-active');
             });
 
-            // [추가] 픽셀 돋보기(Loupe) 수학적 계산 및 이벤트 바인딩
             const imgEl = document.getElementById('active-photo-img');
             const loupeEl = document.getElementById('photo-loupe');
+            const loupeInner = document.getElementById('loupe-inner-img');
 
-            if(imgEl && loupeEl) {
-                // 돋보기 배경 이미지를 현재 사진으로 설정
-                loupeEl.style.backgroundImage = `url('${photo.url}')`;
+            if(imgEl && loupeEl && loupeInner) {
+                if (imgEl.complete) {
+                    applyColorFeatures(imgEl);
+                } else {
+                    imgEl.addEventListener('load', () => applyColorFeatures(imgEl));
+                }
 
                 imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
                 imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
-
                 imgEl.addEventListener('mousemove', (e) => {
                     const rect = imgEl.getBoundingClientRect();
-                    // 마우스 포인터의 이미지 내 상대 좌표 (비율)
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
 
-                    const xPercent = (x / rect.width) * 100;
-                    const yPercent = (y / rect.height) * 100;
-
-                    // 돋보기 원의 위치를 마우스 포인터로 이동
+                    // 1. 돋보기 UI 박스의 위치 이동
                     loupeEl.style.left = `${x}px`;
                     loupeEl.style.top = `${y}px`;
 
-                    // 2.5배 확대 배율 적용
+                    // 2. 내부 이미지 확대 비율 및 포커싱 이동 (background-image 대체 로직)
                     const zoom = 2.5;
-                    loupeEl.style.backgroundSize = `${rect.width * zoom}px ${rect.height * zoom}px`;
-                    loupeEl.style.backgroundPosition = `${xPercent}% ${yPercent}%`;
+                    loupeInner.style.width = `${rect.width * zoom}px`;
+                    loupeInner.style.height = `${rect.height * zoom}px`;
+
+                    // 돋보기 원(width:180px)의 정중앙 반경(90px)에 커서 포인트를 맞춤
+                    loupeInner.style.left = `${90 - (x * zoom)}px`;
+                    loupeInner.style.top = `${90 - (y * zoom)}px`;
                 });
             }
         });
@@ -395,38 +506,29 @@ window.Portfolio = (() => {
         if (DOM.mapLoader) DOM.mapLoader.classList.add('hidden');
         const first = posts.find(p => p.lat && p.lng) || {lat: 37.56, lng: 126.97};
         if (!state.mapInstance) { state.mapInstance = new kakao.maps.Map(DOM.mapCanvas, { center: new kakao.maps.LatLng(first.lat, first.lng), level: 11 }); }
-        else {
-            state.mapInstance.relayout();
-            if(posts.length > 0) state.mapInstance.setCenter(new kakao.maps.LatLng(first.lat, first.lng));
-        }
-
+        else { state.mapInstance.relayout(); if(posts.length > 0) state.mapInstance.setCenter(new kakao.maps.LatLng(first.lat, first.lng)); }
         clearMapMarkers();
-
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
-            const content = document.createElement('div'); content.className = 'w-12 h-12 rounded-full border-2 border-white shadow-xl bg-cover bg-center cursor-pointer transition-transform hover:scale-110';
-            content.style.backgroundImage = `url(${post.photos[0].url})`;
+            const content = document.createElement('div');
+            content.className = 'w-12 h-12 rounded-full border-2 border-white shadow-xl bg-surface cursor-pointer transition-transform hover:scale-110 overflow-hidden relative';
+            // [최적화] 맵 마커 이미지도 crossorigin 속성 통일
+            content.innerHTML = `<img src="${post.photos[0].url}" crossorigin="anonymous" class="w-full h-full object-cover">`;
             content.addEventListener('click', () => openModal(post));
             const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1.2 });
-            overlay.setMap(state.mapInstance);
-            state.mapMarkers.push(overlay);
+            overlay.setMap(state.mapInstance); state.mapMarkers.push(overlay);
         });
     };
 
     const drawGoogleMap = (posts) => {
         if (DOM.mapLoader) DOM.mapLoader.classList.add('hidden');
         const first = posts.find(p => p.lat && p.lng) || {lat: 37.56, lng: 126.97};
-        if(!state.mapInstance) {
-            state.mapInstance = new google.maps.Map(DOM.mapCanvas, { zoom: 6, center: { lat: parseFloat(first.lat), lng: parseFloat(first.lng) }, mapTypeControl: false });
-        }
-
+        if(!state.mapInstance) { state.mapInstance = new google.maps.Map(DOM.mapCanvas, { zoom: 6, center: { lat: parseFloat(first.lat), lng: parseFloat(first.lng) }, mapTypeControl: false }); }
         clearMapMarkers();
-
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
             const marker = new google.maps.Marker({ position: { lat: parseFloat(post.lat), lng: parseFloat(post.lng) }, map: state.mapInstance });
-            marker.addListener("click", () => openModal(post));
-            state.mapMarkers.push(marker);
+            marker.addListener("click", () => openModal(post)); state.mapMarkers.push(marker);
         });
     };
 
