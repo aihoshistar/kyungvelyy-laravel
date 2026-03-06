@@ -504,18 +504,23 @@ window.Portfolio = (() => {
                         
                         <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
                         
-                        <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair z-10 relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
+                        <!-- [수정] 3x3 그리드가 이미지 영역에만 딱 맞게 그려지도록 inline-block Wrapper 추가 -->
+                        <div class="relative inline-block max-w-full z-10">
+                            <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
+
+                            <!-- 그리드 오버레이 (이미지 Wrapper 내부에 배치되어 이미지 크기를 정확히 따라감) -->
+                            <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
+                                <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
+                                <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
+                                <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
+                                <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
+                            </div>
+                        </div>
 
                         <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
                             <img id="loupe-inner-img" crossorigin="anonymous" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
                         </div>
 
-                        <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 z-30 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
-                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
-                            <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
-                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
-                            <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
-                        </div>
                         <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-40" title="3x3 구도 보기">
                             <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
                         </button>
