@@ -1,4 +1,4 @@
-name: Ultra-Fast Incremental Deploy
+name: Optimized Deploy (FTP + SSH)
 
 on:
   push:
@@ -11,64 +11,37 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 전체 이력을 가져와 파일 변경 추적 성능 향상
 
-      # 1. 배포 상태 파일 캐싱 (가장 중요한 최적화)
-      # 지난 배포 때 어떤 파일을 올렸는지 기록한 파일을 보관하여 다음 배포 때 재사용합니다.
-      - name: Cache FTP Sync State
-        uses: actions/cache@v4
-        with:
-          path: .ftp-deploy-sync-state.json
-          key: ${{ runner.os }}-ftp-state-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-ftp-state-
-
-      # 2. PHP 및 Composer 설정 (캐싱 포함)
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
-
-      - name: Cache Composer Dependencies
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-
-      - name: Install Composer
-        run: composer install --no-dev --optimize-autoloader --no-interaction
-
-      # 3. Node.js 및 에셋 빌드 (캐싱 포함)
+      # 1. Node.js 빌드 (에셋 빌드 결과물만 전송하기 위함)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache NPM Dependencies
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Install NPM & Build
+      - name: Build Assets (Vite)
         run: |
           npm install
           npm run build
 
-      # 4. 배포 패키지 구성
+      # 2. 배포 패키지 구성 (vendor, node_modules 제외)
       - name: Prepare Deployment Files
         run: |
           rm -rf deploy
           mkdir -p deploy
-          rsync -av --exclude='deploy' . ./deploy/
-          rm -rf ./deploy/node_modules ./deploy/tests ./deploy/.git ./deploy/.github
+          rsync -av --exclude='deploy' \
+                    --exclude='vendor' \
+                    --exclude='node_modules' \
+                    --exclude='tests' \
+                    --exclude='.git' \
+                    --exclude='.github' \
+                    . ./deploy/
+
+          # 필수 폴더 구조 생성 (서버에서 에러 방지)
           mkdir -p ./deploy/storage/framework/{cache/data,sessions,views}
           mkdir -p ./deploy/storage/logs
 
-      # 5. 초고속 증분 전송 (변경된 파일만!)
-      - name: Sync Changed Files Only
+      # 3. 변경된 소스코드 및 빌드된 에셋만 FTP 전송 (매우 빠름)
+      - name: Sync Files to Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -76,9 +49,24 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/
           server-dir: ./
-          # 'dry-run: false'가 기본값이며, 자동으로 파일 비교 후 전송합니다.
-          # 전송 후 .ftp-deploy-sync-state.json 파일이 로컬에 생성됩니다.
           exclude: |
             **/.git*
             **/.git*/**
             .env
+
+      # 4. SSH를 통해 서버에서 직접 Composer 설치 및 캐시 최적화
+      - name: Post-Deployment Commands via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            cd domains/kkyungvelyy.com
+            # 서버에서 직접 라이브러리 설치 (FTP보다 훨씬 빠름)
+            composer install --no-dev --optimize-autoloader --no-interaction
+            # 라라벨 최적화 명령어
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
