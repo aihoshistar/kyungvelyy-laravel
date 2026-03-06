@@ -22,7 +22,16 @@ class PostController extends Controller
         ]);
     }
 
-    public function toggleReaction(Request $request, Photo $photo) {
+    /**
+     * 특정 사진의 반응 토글 (POST)
+     */
+    public function toggleReaction(Request $request, Photo $photo)
+    {
+        $request->validate([
+            'type' => 'required|string',
+            'fingerprint' => 'required|string',
+        ]);
+
         $type = $request->input('type');
         $fingerprint = $request->input('fingerprint');
 
@@ -32,15 +41,29 @@ class PostController extends Controller
             $reaction->delete();
             $status = 'removed';
         } else {
-            $photo->reactions()->create(['type' => $type, 'fingerprint' => $fingerprint]);
+            $photo->reactions()->create([
+                'type' => $type,
+                'fingerprint' => $fingerprint
+            ]);
             $status = 'added';
         }
 
         return response()->json([
             'status' => $status,
-            'counts' => $photo->reaction_counts // 최신 카운트 반환
+            'counts' => $photo->reaction_counts // Photo 모델의 Accessor 활용
         ]);
     }
+
+    /**
+     * 특정 사진의 최신 반응 카운트 조회 (GET)
+     */
+    public function getReactions(Photo $photo)
+    {
+        return response()->json([
+            'counts' => $photo->reaction_counts
+        ]);
+    }
+
 
     /**
      * Show the form for creating a new resource.

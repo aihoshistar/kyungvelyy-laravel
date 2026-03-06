@@ -32,9 +32,9 @@ return [
     ],
 
     'kakao' => [
-        'map_key' => env('KAKAO_MAP_KEY'),
+        'map_key' => env('KAKAO_MAP_API_KEY'),
     ],
     'google' => [
-        'map_key' => env('GOOGLE_MAP_KEY'),
+        'map_key' => env('GOOGLE_MAP_API_KEY'),
     ],
 ];
