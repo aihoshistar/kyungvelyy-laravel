@@ -10,18 +10,15 @@ class PostController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index()
     {
-        // 앨범과 관계된 개별 사진들을 함께 불러옵니다. (Eager Loading)
-        $query = Post::with('photos')->latest('taken_at');
+        // Post를 불러올 때 관계된 사진(photos)도 함께 로드합니다.
+        $posts = \App\Models\Post::with('photos')->orderBy('taken_at', 'desc')->get();
 
-        if ($request->has('category') && $request->category !== 'all') {
-            $query->where('category', $request->category);
-        }
-
-        $posts = $query->get();
-
-        return view('welcome', compact('posts'));
+        // 데이터를 프론트엔드의 JS 변수로 온전히 넘기기 위해 JSON으로 캐스팅합니다.
+        return view('welcome', [
+            'posts' => $posts
+        ]);
     }
 
     /**

@@ -1,1 +1,86 @@
+/* Tailwind v4 코어 임포트 */
 @import "tailwindcss";
+
+/* JIT 컴파일러가 JS 문자열 안의 클래스도 스캔하도록 경로 강제 지정 */
+@source "../views";
+
+/* 1. 기본 설정 및 테마 변수 (Base) */
+@layer base {
+    :root {
+        --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+        /* Light Mode Colors */
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-text-main: #0f172a;
+        --color-text-muted: #64748b;
+        --color-border: rgba(0, 0, 0, 0.08);
+        --color-nav-bg: rgba(248, 250, 252, 0.85);
+        --color-modal-bg: rgba(255, 255, 255, 0.95);
+        --color-btn-active-bg: #0f172a;
+        --color-btn-active-text: #ffffff;
+        --color-btn-inactive-bg: #ffffff;
+        --color-btn-hover-bg: rgba(0, 0, 0, 0.05);
+    }
+
+    html.dark {
+        /* Dark Mode Colors */
+        --color-bg: #000000;
+        --color-surface: #111111;
+        --color-text-main: #ffffff;
+        --color-text-muted: #9ca3af;
+        --color-border: rgba(255, 255, 255, 0.1);
+        --color-nav-bg: rgba(0, 0, 0, 0.85);
+        --color-modal-bg: rgba(0, 0, 0, 0.95);
+        --color-btn-active-bg: #ffffff;
+        --color-btn-active-text: #000000;
+        --color-btn-inactive-bg: #111111;
+        --color-btn-hover-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+        background-color: var(--color-bg);
+        color: var(--color-text-main);
+        font-family: 'Pretendard', -apple-system, sans-serif;
+        transition: background-color 0.5s var(--ease-spring), color 0.5s var(--ease-spring);
+        overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+    html { scroll-behavior: smooth; }
+}
+
+/* 2. 컴포넌트 유틸리티 (Components & Utilities) */
+@layer utilities {
+    /* 테마 유틸리티 클래스 */
+    .theme-bg { background-color: var(--color-bg); }
+    .theme-surface { background-color: var(--color-surface); }
+    .theme-nav { background-color: var(--color-nav-bg); }
+    .theme-modal { background-color: var(--color-modal-bg); }
+    .theme-text { color: var(--color-text-main); }
+    .theme-text-muted { color: var(--color-text-muted); }
+    .theme-border { border-color: var(--color-border); }
+    .theme-btn-hover:hover { background-color: var(--color-btn-hover-bg); }
+
+    .theme-filter-active { background-color: var(--color-btn-active-bg); color: var(--color-btn-active-text); border-color: transparent; }
+    .theme-filter-inactive { background-color: var(--color-btn-inactive-bg); color: var(--color-text-muted); border-color: var(--color-border); }
+    .theme-filter-inactive:hover { color: var(--color-text-main); border-color: var(--color-text-muted); }
+
+    /* 애니메이션 및 마스크 */
+    .ease-spring { transition-timing-function: var(--ease-spring); }
+
+    .reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.8s var(--ease-spring), transform 0.8s var(--ease-spring);
+    }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+
+    .img-mask {
+        clip-path: inset(0 0 0 0 round 0.75rem);
+        transition: clip-path 0.5s var(--ease-spring);
+    }
+    .photo-card:hover .img-mask {
+        clip-path: inset(0.5rem 0.5rem 0.5rem 0.5rem round 0.5rem);
+    }
+}
