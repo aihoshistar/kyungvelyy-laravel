@@ -12,8 +12,7 @@ window.Portfolio = (() => {
         mapLoaded: { kakao: false, google: false },
         fingerprint: null,
         isGridActive: false,
-        mapMarkers: [],
-        lenis: null
+        mapMarkers: []
     };
 
     let DOM = {};
@@ -53,7 +52,6 @@ window.Portfolio = (() => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
         });
 
-        initLenis();
         initFilters();
         bindEvents();
         bindShortcuts();
@@ -62,26 +60,6 @@ window.Portfolio = (() => {
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
 
         checkUrlHash();
-    };
-
-    const initLenis = () => {
-        if (typeof Lenis !== 'undefined') {
-            state.lenis = new Lenis({
-                duration: 1.2,
-                easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-                direction: 'vertical',
-                gestureDirection: 'vertical',
-                smooth: true,
-                smoothTouch: false,
-                touchMultiplier: 2,
-            });
-
-            function raf(time) {
-                state.lenis.raf(time);
-                requestAnimationFrame(raf);
-            }
-            requestAnimationFrame(raf);
-        }
     };
 
     const bindShortcuts = () => {
@@ -228,7 +206,6 @@ window.Portfolio = (() => {
         if (!DOM.modal.classList.contains('hidden') && state.activePost) renderActiveSlide();
     };
 
-    // [수정] 다국어 JSON(객체) 처리 시 null 에러를 완벽히 방지하도록 개선
     const getTrans = (obj) => {
         if (!obj) return '';
         if (typeof obj === 'string') return obj;
@@ -296,7 +273,6 @@ window.Portfolio = (() => {
             imgEl.onload = initGridVisuals;
             imgEl.src = post.photos[0].url;
             
-            // 캐시된 이미지의 경우 onload가 안 탈 수 있으므로 수동 체크
             if (imgEl.complete && imgEl.naturalWidth > 0) {
                 initGridVisuals();
             }
@@ -453,7 +429,6 @@ window.Portfolio = (() => {
     };
 
     const openModal = (post, initialIndex = 0) => {
-        if (state.lenis) state.lenis.stop();
         state.activePost = post;
         state.currentPhotoIndex = initialIndex;
         state.isGridActive = false;
@@ -476,7 +451,6 @@ window.Portfolio = (() => {
             document.body.style.overflow = '';
             state.activePost = null;
             DOM.modalContainer.style.background = 'var(--color-surface)';
-            if (state.lenis) state.lenis.start();
         }, 500);
     };
 
@@ -502,14 +476,12 @@ window.Portfolio = (() => {
 
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
         
-        // [수정] 다국어 JSON 지원 및 예외 처리
         const titleStr = getTrans(photo.title) || getTrans(post.title); 
         const catTranslation = dict[`cat${post.category}`] || post.category;
 
         DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-3"><span class="text-xs px-2 py-1 rounded border theme-border theme-text-muted font-bold uppercase tracking-wider">${catTranslation}</span><h2 class="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-md">${titleStr}</h2></div>`;
         DOM.modalDots.innerHTML = post.photos.map((_, i) => `<div class="w-1 h-1 rounded-full transition-all duration-300 ${i === state.currentPhotoIndex ? 'bg-white w-3' : 'bg-white/30'}"></div>`).join('');
 
-        // [수정] 셔터스피드 (num/den) 완벽 지원
         const exifArr = [];
         if (photo.exif_focal_length) exifArr.push(`${photo.exif_focal_length}mm`);
         if (photo.exif_aperture) exifArr.push(`f/${parseFloat(photo.exif_aperture)}`);
@@ -594,7 +566,6 @@ window.Portfolio = (() => {
                 const skeleton = DOM.modalSliderContent.querySelector('.skeleton-bg');
 
                 if(imgEl && loupeEl && loupeInner) {
-                    // [수정] 블러-업 로딩 버그 해결
                     const initVisuals = () => {
                         imgEl.classList.remove('scale-[1.02]', 'blur-lg', 'opacity-0');
                         imgEl.classList.add('scale-100', 'blur-0', 'opacity-100');
@@ -753,7 +724,6 @@ window.Portfolio = (() => {
             ctx.fillStyle = "#111111";
             ctx.font = `bold ${titleFontSize}px Pretendard, -apple-system, sans-serif`;
             
-            // [수정] 프레임 생성 시 다국어 제목 완벽 지원
             const title = getTrans(photo.title) || getTrans(post.title);
             ctx.fillText(title, px, textYOffset);
 

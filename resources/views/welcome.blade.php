@@ -17,8 +17,6 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
-    <!-- [추가] 부드러운 스무스 스크롤링을 위한 Lenis 라이브러리 추가 -->
-    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
