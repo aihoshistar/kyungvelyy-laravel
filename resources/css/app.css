@@ -56,7 +56,7 @@
     .reaction-btn.active { background: var(--color-text-main); border-color: var(--color-text-main); }
     .reaction-btn.active span { color: var(--color-bg) !important; }
 
-    /* [문제 2 해결] 하이엔드 액션 버튼 디자인 (호버 시 반전) */
+    /* 액션 버튼 (Download/Share) */
     .action-btn {
         @apply flex-1 flex items-center justify-center py-3.5 rounded-xl border transition-all duration-300 text-[11px] font-bold uppercase tracking-widest cursor-pointer;
         border-color: var(--color-border);
@@ -70,6 +70,26 @@
         box-shadow: 0 10px 20px -10px rgba(0,0,0,0.2);
     }
     html.dark .action-btn:hover { box-shadow: 0 10px 20px -10px rgba(255,255,255,0.1); }
+
+    /* --- [추가] 픽셀 돋보기 (Loupe) 스타일 --- */
+    .loupe {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.3);
+        pointer-events: none; /* 마우스 이벤트 통과 (방해 방지) */
+        opacity: 0;
+        transition: opacity 0.2s var(--ease-spring);
+        z-index: 40;
+        width: 180px;  /* 돋보기 크기 */
+        height: 180px;
+        background-repeat: no-repeat;
+        /* 커서가 돋보기 중앙에 오도록 축 이동 */
+        transform: translate(-50%, -50%);
+    }
+    .loupe.active {
+        opacity: 1;
+    }
 
     /* 기타 유틸리티 */
     .bio-lead { font-variant-caps: all-small-caps; letter-spacing: 0.15em; }

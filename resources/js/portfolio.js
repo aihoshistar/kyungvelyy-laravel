@@ -2,8 +2,8 @@ window.Portfolio = (() => {
     let state = {
         lang: window.CURRENT_LOCALE || 'ko',
         category: 'all',
-        country: 'all',  // [추가] 국가 필터 상태
-        camera: 'all',   // [추가] 카메라 필터 상태
+        country: 'all',
+        camera: 'all',
         posts: window.PORTFOLIO_DATA || [],
         activePost: null,
         currentPhotoIndex: 0,
@@ -12,7 +12,7 @@ window.Portfolio = (() => {
         mapLoaded: { kakao: false, google: false },
         fingerprint: null,
         isGridActive: false,
-        mapMarkers: []   // [추가] 맵 마커 추적 배열 (필터 변경 시 삭제용)
+        mapMarkers: []
     };
 
     let DOM = {};
@@ -42,7 +42,6 @@ window.Portfolio = (() => {
         if (!id) { id = 'fp_' + Math.random().toString(36).substring(2, 9) + Date.now(); localStorage.setItem('guest_fingerprint', id); }
         state.fingerprint = id;
 
-        // [추가] 다국어 딕셔너리에 필터 텍스트 안전 장치 추가
         const i18nFallback = {
             ko: { filterAllCountries: '모든 국가', filterAllCameras: '모든 기종' },
             en: { filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras' },
@@ -52,14 +51,13 @@ window.Portfolio = (() => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
         });
 
-        initFilters(); // 드롭다운 필터 초기화
+        initFilters();
         bindEvents();
         initTheme();
         updateLanguage(state.lang);
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
     };
 
-    // [추가] 국가 및 기종 추출 및 필터 세팅
     const initFilters = () => {
         const countries = [...new Set(state.posts.map(p => p.country).filter(Boolean))].sort();
         const cameras = [...new Set(state.posts.flatMap(p => p.photos.map(ph => ph.exif_body)).filter(Boolean))].sort();
@@ -141,7 +139,6 @@ window.Portfolio = (() => {
 
     const getTrans = (obj) => (typeof obj === 'string') ? obj : (obj[state.lang] || obj['ko'] || '');
 
-    // [추가] 통합 필터링 함수
     const getFilteredPosts = () => {
         return state.posts.filter(p => {
             const matchCat = state.category === 'all' || p.category === state.category;
@@ -283,15 +280,24 @@ window.Portfolio = (() => {
 
         DOM.modalSliderContent.innerHTML = `
             <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter bg-black/5 dark:bg-black/20 relative">
-                <div class="relative inline-block max-w-full max-h-full">
-                    <img src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block">
+
+                <!-- 이미지를 꽉 안는 컨테이너 -->
+                <div class="relative inline-block max-w-full max-h-full" id="photo-loupe-container">
+                    <img id="active-photo-img" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair">
+
+                    <!-- [추가] 픽셀 돋보기 엘리먼트 (PC 환경에서만 동작) -->
+                    <div id="photo-loupe" class="loupe hidden md:block"></div>
+
+                    <!-- 3x3 그리드 오버레이 -->
                     <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
                     </div>
-                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg" title="3x3 구도 보기">
+
+                    <!-- 토글 버튼 -->
+                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg z-50" title="3x3 구도 보기">
                         <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
                     </button>
                 </div>
@@ -319,10 +325,46 @@ window.Portfolio = (() => {
                 </div>
             </div>
         `;
-        requestAnimationFrame(() => { Array.from(DOM.modalSliderContent.children).forEach(child => { child.classList.remove('slide-fade-enter'); child.classList.add('slide-fade-active'); }); });
+
+        requestAnimationFrame(() => {
+            Array.from(DOM.modalSliderContent.children).forEach(child => {
+                child.classList.remove('slide-fade-enter');
+                child.classList.add('slide-fade-active');
+            });
+
+            // [추가] 픽셀 돋보기(Loupe) 수학적 계산 및 이벤트 바인딩
+            const imgEl = document.getElementById('active-photo-img');
+            const loupeEl = document.getElementById('photo-loupe');
+
+            if(imgEl && loupeEl) {
+                // 돋보기 배경 이미지를 현재 사진으로 설정
+                loupeEl.style.backgroundImage = `url('${photo.url}')`;
+
+                imgEl.addEventListener('mouseenter', () => loupeEl.classList.add('active'));
+                imgEl.addEventListener('mouseleave', () => loupeEl.classList.remove('active'));
+
+                imgEl.addEventListener('mousemove', (e) => {
+                    const rect = imgEl.getBoundingClientRect();
+                    // 마우스 포인터의 이미지 내 상대 좌표 (비율)
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    const xPercent = (x / rect.width) * 100;
+                    const yPercent = (y / rect.height) * 100;
+
+                    // 돋보기 원의 위치를 마우스 포인터로 이동
+                    loupeEl.style.left = `${x}px`;
+                    loupeEl.style.top = `${y}px`;
+
+                    // 2.5배 확대 배율 적용
+                    const zoom = 2.5;
+                    loupeEl.style.backgroundSize = `${rect.width * zoom}px ${rect.height * zoom}px`;
+                    loupeEl.style.backgroundPosition = `${xPercent}% ${yPercent}%`;
+                });
+            }
+        });
     };
 
-    // [추가] 맵 초기화 전 기존 마커 클리어
     const clearMapMarkers = () => {
         if (state.mapMarkers && state.mapMarkers.length > 0) {
             state.mapMarkers.forEach(m => m.setMap(null));
@@ -332,7 +374,7 @@ window.Portfolio = (() => {
 
     const initHybridMap = () => {
         const filtered = getFilteredPosts();
-        const isKoreaMode = state.posts.some(p => p.country === 'South Korea'); // 맵 엔진 기준은 전체 포스트
+        const isKoreaMode = state.posts.some(p => p.country === 'South Korea');
         if (DOM.mapLoader) DOM.mapLoader.classList.remove('hidden');
         if (isKoreaMode) {
             if (state.mapLoaded.kakao) drawKakaoMap(filtered);
@@ -358,7 +400,7 @@ window.Portfolio = (() => {
             if(posts.length > 0) state.mapInstance.setCenter(new kakao.maps.LatLng(first.lat, first.lng));
         }
 
-        clearMapMarkers(); // 기존 마커 지우기
+        clearMapMarkers();
 
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
@@ -378,7 +420,7 @@ window.Portfolio = (() => {
             state.mapInstance = new google.maps.Map(DOM.mapCanvas, { zoom: 6, center: { lat: parseFloat(first.lat), lng: parseFloat(first.lng) }, mapTypeControl: false });
         }
 
-        clearMapMarkers(); // 기존 마커 지우기
+        clearMapMarkers();
 
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
