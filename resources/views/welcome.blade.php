@@ -66,8 +66,8 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-start">
                 <div class="lg:col-span-7">
                     <div class="flex items-center gap-5 mb-6">
-                        <img src="https://www.kkyungvelyy.com/photo/profile.jpg" alt="Park Kyoung Seo" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border theme-border">
-                        <span class="bio-lead theme-text-muted font-bold text-xs block uppercase tracking-widest" data-i18n="heroBioLead">{{ __('portfolio.heroBioLead') }}</span>
+                        <img src="https://www.kkyungvelyy.com/photo/profile.jpg" alt="Park Kyoung Seo" class="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border theme-border">
+                        <span class="bio-lead theme-text-muted font-bold text-sm md:text-base block uppercase tracking-widest" data-i18n="heroBioLead">{{ __('portfolio.heroBioLead') }}</span>
                     </div>
                     <h1 class="text-6xl md:text-8xl font-bold theme-text mb-8 tracking-tighter transition-colors duration-500" data-i18n="heroName">{{ __('portfolio.heroName') }}</h1>
                     <h2 class="text-2xl md:text-4xl font-medium leading-tight theme-text mb-8" data-i18n="heroCatchphrase">{!! __('portfolio.heroCatchphrase') !!}</h2>
@@ -79,10 +79,10 @@
                     <p data-i18n="heroBioText3">{{ __('portfolio.heroBioText3') }}</p>
 
                     <div class="pt-8 flex flex-wrap gap-x-10 gap-y-6 border-t theme-border mt-8">
-                        <div><span class="block text-[10px] font-bold theme-text uppercase tracking-widest mb-1.5" data-i18n="expertise">Expertise</span><span class="text-sm font-medium">Blockchain Infra</span></div>
-                        <div><span class="block text-[10px] font-bold theme-text uppercase tracking-widest mb-1.5" data-i18n="basedIn">Based in</span><span class="text-sm font-medium">Seoul, Korea</span></div>
+                        <div><span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest mb-1.5" data-i18n="expertise">Expertise</span><span class="text-base font-medium">Blockchain Infra</span></div>
+                        <div><span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest mb-1.5" data-i18n="basedIn">Based in</span><span class="text-base font-medium">Seoul, Korea</span></div>
                         <div>
-                            <span class="block text-[10px] font-bold theme-text uppercase tracking-widest mb-2.5">Connect</span>
+                            <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest mb-2.5">Connect</span>
                             <div class="flex items-center gap-4 text-sm font-medium">
                                 <a href="https://github.com/aihoshistar" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-2 px-3 py-1.5 rounded-full border theme-border theme-surface hover:border-gray-400 transition-all duration-300 shadow-sm hover:shadow-md">
                                     <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
@@ -96,7 +96,7 @@
                         </div>
                     </div>
                     <div class="pt-2">
-                        <span class="block text-[10px] font-bold theme-text uppercase tracking-widest mb-3">Projects & Websites</span>
+                        <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest mb-3">Projects & Websites</span>
                         <ul class="space-y-3">
                             <li>
                                 <a href="https://ai-agent-photo-sky.vercel.app" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 text-sm font-medium hover:theme-text transition-colors w-fit">
@@ -132,28 +132,28 @@
                 <!-- 필터 통합 바 (카테고리 + 고급 드롭다운) -->
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex space-x-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar" id="category-filters">
-                        <button class="filter-btn active px-4 py-1.5 rounded-full text-[13px] font-semibold theme-filter-active border transition-colors" data-category="all" data-i18n="catAll">{{ __('portfolio.catAll') }}</button>
-                        <button class="filter-btn px-4 py-1.5 rounded-full text-[13px] font-medium theme-filter-inactive border transition-colors" data-category="Landscape" data-i18n="catLandscape">{{ __('portfolio.catLandscape') }}</button>
-                        <button class="filter-btn px-4 py-1.5 rounded-full text-[13px] font-medium theme-filter-inactive border transition-colors" data-category="Cityscape" data-i18n="catCityscape">{{ __('portfolio.catCityscape') }}</button>
+                        <button class="filter-btn active px-5 py-2 rounded-full text-sm font-semibold theme-filter-active border transition-colors" data-category="all" data-i18n="catAll">{{ __('portfolio.catAll') }}</button>
+                        <button class="filter-btn px-5 py-2 rounded-full text-sm font-medium theme-filter-inactive border transition-colors" data-category="Landscape" data-i18n="catLandscape">{{ __('portfolio.catLandscape') }}</button>
+                        <button class="filter-btn px-5 py-2 rounded-full text-sm font-medium theme-filter-inactive border transition-colors" data-category="Cityscape" data-i18n="catCityscape">{{ __('portfolio.catCityscape') }}</button>
                     </div>
 
                     <div class="hidden md:block w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
 
                     <div class="flex space-x-2">
                         <div class="relative">
-                            <select id="country-filter" class="appearance-none bg-surface border theme-border rounded-full pl-4 pr-8 py-1.5 text-[13px] font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                            <select id="country-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
                                 <option value="all" data-i18n="filterAllCountries">모든 국가</option>
                             </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 theme-text-muted">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
                         <div class="relative">
-                            <select id="camera-filter" class="appearance-none bg-surface border theme-border rounded-full pl-4 pr-8 py-1.5 text-[13px] font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                            <select id="camera-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
                                 <option value="all" data-i18n="filterAllCameras">모든 기종</option>
                             </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 theme-text-muted">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
                     </div>
@@ -181,7 +181,7 @@
         <div id="modal-container" class="relative w-[95%] max-w-7xl h-[85vh] md:h-[80vh] theme-surface rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-transform duration-500 scale-95">
             <div class="w-full flex justify-between items-center px-6 py-5 border-b theme-border bg-opacity-50 z-[60]">
                 <div class="flex flex-col">
-                    <span id="modal-indicator" class="text-[10px] font-bold tracking-[0.3em] theme-text-muted uppercase mb-1">01 / 05</span>
+                    <span id="modal-indicator" class="text-xs md:text-sm font-bold tracking-[0.3em] theme-text-muted uppercase mb-1">01 / 05</span>
                     <div id="modal-title-area" class="theme-text font-medium transition-all duration-500 truncate max-w-[250px] md:max-w-md"></div>
                 </div>
                 <button onclick="window.Portfolio.closeModal()" class="p-2 theme-text hover:bg-black/10 dark:hover:bg-white/10 rounded-full cursor-pointer transition-colors">

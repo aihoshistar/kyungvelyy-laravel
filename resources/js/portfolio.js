@@ -179,9 +179,9 @@ window.Portfolio = (() => {
             card.innerHTML = `
                 <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
                     <img src="${post.photos[0].url}" crossorigin="anonymous" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
-                        <span class="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase mb-2">${catTranslation}</span>
-                        <h4 class="text-white font-medium text-lg leading-snug drop-shadow-lg">${getTrans(post.title)}</h4>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 md:p-8">
+                        <span class="text-xs md:text-sm font-bold tracking-[0.2em] text-white/80 uppercase mb-2">${catTranslation}</span>
+                        <h4 class="text-white font-semibold text-xl md:text-2xl leading-snug drop-shadow-md">${getTrans(post.title)}</h4>
                     </div>
                 </div>
             `;
@@ -393,7 +393,7 @@ window.Portfolio = (() => {
         const titleStr = getTrans(photo.title);
         const catTranslation = dict[`cat${post.category}`] || post.category;
 
-        DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-2"><span class="text-[9px] px-1.5 py-0.5 rounded border theme-border theme-text-muted font-bold uppercase">${catTranslation}</span><h2 class="text-sm md:text-base font-semibold truncate max-w-[200px]">${titleStr}</h2></div>`;
+        DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-3"><span class="text-xs px-2 py-1 rounded border theme-border theme-text-muted font-bold uppercase tracking-wider">${catTranslation}</span><h2 class="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-md">${titleStr}</h2></div>`;
         DOM.modalDots.innerHTML = post.photos.map((_, i) => `<div class="w-1 h-1 rounded-full transition-all duration-300 ${i === state.currentPhotoIndex ? 'bg-white w-3' : 'bg-white/30'}"></div>`).join('');
 
         const exifArr = [];
@@ -425,19 +425,19 @@ window.Portfolio = (() => {
                     </button>
                 </div>
             </div>
-            <div class="w-full md:w-[35%] flex flex-col justify-center p-8 md:p-10 space-y-6 slide-fade-enter overflow-y-auto">
-                <div class="space-y-3">
-                    <h3 class="text-xl md:text-2xl font-bold theme-text leading-tight">${titleStr}</h3>
-                    <p class="theme-text-muted font-light text-sm leading-relaxed">${getTrans(photo.description)}</p>
+            <div class="w-full md:w-[35%] flex flex-col justify-center p-8 md:p-10 space-y-8 slide-fade-enter overflow-y-auto">
+                <div class="space-y-4">
+                    <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
+                    <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
                 </div>
 
-                <div class="space-y-2.5">
-                    <span class="block text-[9px] theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
-                    <div id="color-palette-container" class="flex gap-2">
-                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-4 rounded-sm bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                <div class="space-y-3">
+                    <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
+                    <div id="color-palette-container" class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
                     </div>
                 </div>
 
@@ -445,15 +445,15 @@ window.Portfolio = (() => {
                     ${reactions.map(r => {
                         const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
                         const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
-                        return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-3 py-1.5 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-base">${r.icon}</span><span class="text-xs theme-text-muted transition-colors">${count}</span></button>`;
+                        return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
                     }).join('')}
                 </div>
-                <div class="pt-6 border-t theme-border grid grid-cols-2 gap-4">
-                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-xs font-medium truncate">${photo.exif_body || '-'}</span></div>
-                    <div class="flex flex-col"><span class="text-[9px] theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-xs font-medium truncate">${photo.exif_lens || '-'}</span></div>
-                    <div class="col-span-2 flex flex-wrap gap-1.5 pt-1">${exifArr.map(e => `<span class="px-2 py-0.5 bg-surface border theme-border rounded text-[9px] theme-text font-mono">${e}</span>`).join('')}</div>
+                <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
+                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
+                    <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
+                    <div class="col-span-2 flex flex-wrap gap-2 pt-1">${exifArr.map(e => `<span class="px-3 py-1 bg-surface border theme-border rounded text-xs theme-text font-mono tracking-wide">${e}</span>`).join('')}</div>
                 </div>
-                <div class="flex gap-2 pt-2">
+                <div class="flex gap-3 pt-4">
                     <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
                     <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
                 </div>
