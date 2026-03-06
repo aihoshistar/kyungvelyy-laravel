@@ -1,0 +1,70 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main  # 메인 브랜치에 푸시될 때 실행
+
+jobs:
+  laravel-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 소스 코드 체크아웃
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. PHP 환경 설정
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # 사용 중인 PHP 버전에 맞춰 수정
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
+          coverage: none
+
+      # 3. Composer 의존성 설치 (운영 환경 최적화)
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+      # 4. Node.js 환경 설정 및 에셋 빌드 (Vite)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install NPM Dependencies & Build
+        run: |
+          npm install
+          npm run build
+
+      # 5. 배포용 파일 정리 (불필요한 파일 제외)
+      # 운영에 필요 없는 node_modules, tests, readme 등은 서버에 올리지 않습니다.
+      - name: Prepare Deployment Files
+        run: |
+          mkdir -p deploy
+          cp -r ./* ./deploy/
+          rm -rf ./deploy/node_modules
+          rm -rf ./deploy/tests
+          rm -rf ./deploy/.git
+          rm -rf ./deploy/.github
+
+      # 6. FTP를 통한 파일 전송 (Hostinger 서버로 업로드)
+      - name: Sync Files to Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./deploy/
+          # Hostinger의 라라벨 프로젝트 루트 경로를 입력하세요.
+          # 보통 상위 폴더에 두고 public_html을 매핑했다면 해당 경로 입력
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .env
+            storage/*.zmdi
+
+      # 7. (선택 사항) 배포 후 정리 작업
+      # SSH 접근이 가능하다면 캐시 클리어 명령어를 추가할 수 있습니다.
