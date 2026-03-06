@@ -116,10 +116,10 @@
                 
                 let uploadSuccess = false;
                 let retryCount = 0;
-                const maxRetries = 3; // 최대 3번까지 자동 재시도
+                let currentWaitTime = 30000; // 초기 대기 시간: 30초
 
-                // 💡 [핵심] 성공할 때까지(또는 최대 재시도 횟수에 도달할 때까지) 반복하는 큐 로직
-                while (!uploadSuccess && retryCount < maxRetries) {
+                // 💡 [수정] maxRetries를 없애고 성공할 때까지 무한 반복
+                while (!uploadSuccess) {
                     const formData = new FormData();
                     formData.append('photo', file);
                     formData.append('location_hint', locationHint.value);
@@ -149,16 +149,18 @@
                         } else {
                             const errorMsg = data.error || 'Unknown error';
                             
-                            // 💡 에러 메시지에 'Quota exceeded' 또는 'retry' 단어가 포함되어 있다면 API 제한에 걸린 것
                             if (errorMsg.includes('Quota') || errorMsg.includes('retry') || errorMsg.includes('429')) {
                                 retryCount++;
-                                log(`⚠️ Rate Limit Hit! API 허용량 초과. 30초 대기 후 재시도합니다... (${retryCount}/${maxRetries})`, 'warn');
-                                // 30초 쿨타임 대기 (API가 요구한 26초보다 넉넉하게 설정)
-                                await new Promise(r => setTimeout(r, 30000)); 
+                                log(`⚠️ Rate Limit Hit! API 허용량 초과. ${currentWaitTime / 1000}초 대기 후 재시도합니다... (${retryCount}번째 재시도)`, 'warn');
+                                
+                                // 현재 설정된 시간만큼 대기
+                                await new Promise(r => setTimeout(r, currentWaitTime));
+                                
+                                // 💡 [핵심] 다음 실패를 대비해 대기 시간을 2배로 증가 (최대 30분까지만 증가하도록 제한)
+                                currentWaitTime = Math.min(currentWaitTime * 2, 1800000); 
                             } else {
-                                // API 제한이 아닌 일반 에러(예: S3 용량 초과 등)면 즉시 포기하고 다음 사진으로 넘어감
                                 log(`❌ Error: ${errorMsg}`, 'error');
-                                break; 
+                                break; // API 제한이 아닌 다른 심각한 에러(S3 용량 초과 등)는 루프 탈출
                             }
                         }
                     } catch (error) {
@@ -167,7 +169,7 @@
                     }
                 }
 
-                // 성공적으로 업로드되었고, 마지막 사진이 아니라면 기본 대기 시간을 20초로 상향 조절 (더 안전하게)
+                // 성공적으로 업로드되었고, 마지막 사진이 아니라면 기본 대기 시간(20초) 적용
                 if (uploadSuccess && i < selectedFiles.length - 1) {
                     log('⏳ Waiting 20s to avoid Rate Limit...', 'warn');
                     await new Promise(r => setTimeout(r, 20000));
