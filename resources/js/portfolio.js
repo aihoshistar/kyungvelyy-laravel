@@ -2,6 +2,8 @@ window.Portfolio = (() => {
     let state = {
         lang: window.CURRENT_LOCALE || 'ko',
         category: 'all',
+        country: 'all',  // [추가] 국가 필터 상태
+        camera: 'all',   // [추가] 카메라 필터 상태
         posts: window.PORTFOLIO_DATA || [],
         activePost: null,
         currentPhotoIndex: 0,
@@ -9,7 +11,8 @@ window.Portfolio = (() => {
         mapInstance: null,
         mapLoaded: { kakao: false, google: false },
         fingerprint: null,
-        isGridActive: false // [추가] 3x3 분할선 활성화 상태
+        isGridActive: false,
+        mapMarkers: []   // [추가] 맵 마커 추적 배열 (필터 변경 시 삭제용)
     };
 
     let DOM = {};
@@ -24,7 +27,8 @@ window.Portfolio = (() => {
             modalTitleArea: document.getElementById('modal-title-area'), modalSliderContent: document.getElementById('modal-slider-content'),
             modalDots: document.getElementById('modal-dots'), langBtns: document.querySelectorAll('.lang-btn'),
             filterBtns: document.querySelectorAll('.filter-btn'), themeToggleBtn: document.getElementById('theme-toggle'),
-            toast: document.getElementById('toast'), btnGrid: document.getElementById('btn-grid-view'), btnMap: document.getElementById('btn-map-view')
+            toast: document.getElementById('toast'), btnGrid: document.getElementById('btn-grid-view'), btnMap: document.getElementById('btn-map-view'),
+            countryFilter: document.getElementById('country-filter'), cameraFilter: document.getElementById('camera-filter')
         };
     };
 
@@ -38,8 +42,51 @@ window.Portfolio = (() => {
         if (!id) { id = 'fp_' + Math.random().toString(36).substring(2, 9) + Date.now(); localStorage.setItem('guest_fingerprint', id); }
         state.fingerprint = id;
 
-        bindEvents(); initTheme(); updateLanguage(state.lang);
+        // [추가] 다국어 딕셔너리에 필터 텍스트 안전 장치 추가
+        const i18nFallback = {
+            ko: { filterAllCountries: '모든 국가', filterAllCameras: '모든 기종' },
+            en: { filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras' },
+            ja: { filterAllCountries: 'すべての国', filterAllCameras: 'すべてのカメラ' }
+        };
+        ['ko', 'en', 'ja'].forEach(l => {
+            window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
+        });
+
+        initFilters(); // 드롭다운 필터 초기화
+        bindEvents();
+        initTheme();
+        updateLanguage(state.lang);
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
+    };
+
+    // [추가] 국가 및 기종 추출 및 필터 세팅
+    const initFilters = () => {
+        const countries = [...new Set(state.posts.map(p => p.country).filter(Boolean))].sort();
+        const cameras = [...new Set(state.posts.flatMap(p => p.photos.map(ph => ph.exif_body)).filter(Boolean))].sort();
+
+        if (DOM.countryFilter) {
+            countries.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c; option.textContent = c;
+                DOM.countryFilter.appendChild(option);
+            });
+            DOM.countryFilter.addEventListener('change', (e) => {
+                state.country = e.target.value;
+                if (state.viewMode === 'grid') renderGrid(); else initHybridMap();
+            });
+        }
+
+        if (DOM.cameraFilter) {
+            cameras.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c; option.textContent = c;
+                DOM.cameraFilter.appendChild(option);
+            });
+            DOM.cameraFilter.addEventListener('change', (e) => {
+                state.camera = e.target.value;
+                if (state.viewMode === 'grid') renderGrid(); else initHybridMap();
+            });
+        }
     };
 
     const bindEvents = () => {
@@ -94,6 +141,16 @@ window.Portfolio = (() => {
 
     const getTrans = (obj) => (typeof obj === 'string') ? obj : (obj[state.lang] || obj['ko'] || '');
 
+    // [추가] 통합 필터링 함수
+    const getFilteredPosts = () => {
+        return state.posts.filter(p => {
+            const matchCat = state.category === 'all' || p.category === state.category;
+            const matchCountry = state.country === 'all' || p.country === state.country;
+            const matchCamera = state.camera === 'all' || (p.photos && p.photos.some(ph => ph.exif_body === state.camera));
+            return matchCat && matchCountry && matchCamera;
+        });
+    };
+
     const switchView = (mode) => {
         if (state.viewMode === mode) return; state.viewMode = mode;
         if (mode === 'grid') {
@@ -111,13 +168,12 @@ window.Portfolio = (() => {
 
     const renderGrid = () => {
         DOM.grid.innerHTML = '';
-        const filtered = state.category === 'all' ? state.posts : state.posts.filter(p => p.category === state.category);
+        const filtered = getFilteredPosts();
         filtered.forEach((post, index) => {
             if (!post.photos || post.photos.length === 0) return;
             const card = document.createElement('div');
             card.className = 'photo-card cursor-pointer group reveal active w-full break-inside-avoid relative inline-block mb-6';
             card.style.transitionDelay = `${(index % 6) * 100}ms`;
-
             const catTranslation = window.I18N[state.lang][`cat${post.category}`] || post.category;
 
             card.innerHTML = `
@@ -140,10 +196,7 @@ window.Portfolio = (() => {
             if (response.ok) {
                 const data = await response.json();
                 const photo = state.activePost.photos[state.currentPhotoIndex];
-                if (photo && photo.id === photoId) {
-                    photo.reaction_counts = data.counts;
-                    renderActiveSlide();
-                }
+                if (photo && photo.id === photoId) { photo.reaction_counts = data.counts; renderActiveSlide(); }
             }
         } catch (e) { console.log('Reactions fetch skipped'); }
     };
@@ -166,14 +219,11 @@ window.Portfolio = (() => {
                 body: JSON.stringify({ type: type, fingerprint: state.fingerprint })
             });
             if (response.ok) {
-                const data = await response.json();
-                photo.reaction_counts = data.counts;
-                renderActiveSlide();
+                const data = await response.json(); photo.reaction_counts = data.counts; renderActiveSlide();
             }
         } catch (e) { console.error('Reaction sync failed'); }
     };
 
-    // [추가] 3x3 분할선 토글 함수
     const toggleGrid = () => {
         state.isGridActive = !state.isGridActive;
         const gridOverlay = document.getElementById('grid-overlay');
@@ -181,18 +231,14 @@ window.Portfolio = (() => {
         if (gridOverlay) {
             gridOverlay.classList.toggle('opacity-0', !state.isGridActive);
             gridOverlay.classList.toggle('opacity-100', state.isGridActive);
-
-            // 버튼 아이콘 색상 변경 효과 (활성화 시 강조)
             if(state.isGridActive) btnIcon.classList.replace('text-white', 'text-blue-400');
             else btnIcon.classList.replace('text-blue-400', 'text-white');
         }
     };
 
     const openModal = (post) => {
-        state.activePost = post; state.currentPhotoIndex = 0;
-        state.isGridActive = false; // 모달 열때는 그리드 초기화
-        renderActiveSlide();
-        fetchReactions(post.photos[0].id);
+        state.activePost = post; state.currentPhotoIndex = 0; state.isGridActive = false;
+        renderActiveSlide(); fetchReactions(post.photos[0].id);
 
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
@@ -235,30 +281,20 @@ window.Portfolio = (() => {
         const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}`;
         const safePhotoData = JSON.stringify(photo).replace(/"/g, '&quot;');
 
-        // [수정] 이미지 컨테이너 영역에 3x3 그리드 DOM 추가
         DOM.modalSliderContent.innerHTML = `
             <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter bg-black/5 dark:bg-black/20 relative">
-
-                <!-- 이미지를 감싸는 타이트한 컨테이너 (비율 유지 및 오버레이 밀착) -->
                 <div class="relative inline-block max-w-full max-h-full">
                     <img src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block">
-
-                    <!-- 3x3 그리드 오버레이 (기본 숨김) -->
                     <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
                         <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
                         <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
                     </div>
-
-                    <!-- 그리드 토글 버튼 (우측 상단) -->
-                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg" title="3x3 분할선 보기">
-                        <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path>
-                        </svg>
+                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg" title="3x3 구도 보기">
+                        <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path></svg>
                     </button>
                 </div>
-
             </div>
             <div class="w-full md:w-[35%] flex flex-col justify-center p-8 md:p-10 space-y-6 slide-fade-enter overflow-y-auto">
                 <div class="space-y-3">
@@ -278,21 +314,25 @@ window.Portfolio = (() => {
                     <div class="col-span-2 flex flex-wrap gap-1.5 pt-1">${exifArr.map(e => `<span class="px-2 py-0.5 bg-surface border theme-border rounded text-[9px] theme-text font-mono">${e}</span>`).join('')}</div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn">
-                        <span>${dict.btnDownload || 'DOWNLOAD'}</span>
-                    </button>
-                    <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn">
-                        <span>${dict.btnShare || 'SHARE'}</span>
-                    </button>
+                    <button onclick="window.Portfolio.downloadFramedPhoto('${safePhotoData}', '${shareUrl}')" class="action-btn"><span>${dict.btnDownload || 'DOWNLOAD'}</span></button>
+                    <button onclick="window.Portfolio.sharePhoto('${titleStr}', '${photo.url}', '${shareUrl}')" class="action-btn"><span>${dict.btnShare || 'SHARE'}</span></button>
                 </div>
             </div>
         `;
         requestAnimationFrame(() => { Array.from(DOM.modalSliderContent.children).forEach(child => { child.classList.remove('slide-fade-enter'); child.classList.add('slide-fade-active'); }); });
     };
 
+    // [추가] 맵 초기화 전 기존 마커 클리어
+    const clearMapMarkers = () => {
+        if (state.mapMarkers && state.mapMarkers.length > 0) {
+            state.mapMarkers.forEach(m => m.setMap(null));
+        }
+        state.mapMarkers = [];
+    };
+
     const initHybridMap = () => {
-        const filtered = state.category === 'all' ? state.posts : state.posts.filter(p => p.category === state.category); if (!filtered.length) return;
-        const isKoreaMode = filtered.some(p => p.country === 'South Korea');
+        const filtered = getFilteredPosts();
+        const isKoreaMode = state.posts.some(p => p.country === 'South Korea'); // 맵 엔진 기준은 전체 포스트
         if (DOM.mapLoader) DOM.mapLoader.classList.remove('hidden');
         if (isKoreaMode) {
             if (state.mapLoaded.kakao) drawKakaoMap(filtered);
@@ -313,23 +353,38 @@ window.Portfolio = (() => {
         if (DOM.mapLoader) DOM.mapLoader.classList.add('hidden');
         const first = posts.find(p => p.lat && p.lng) || {lat: 37.56, lng: 126.97};
         if (!state.mapInstance) { state.mapInstance = new kakao.maps.Map(DOM.mapCanvas, { center: new kakao.maps.LatLng(first.lat, first.lng), level: 11 }); }
-        else { state.mapInstance.relayout(); state.mapInstance.setCenter(new kakao.maps.LatLng(first.lat, first.lng)); }
+        else {
+            state.mapInstance.relayout();
+            if(posts.length > 0) state.mapInstance.setCenter(new kakao.maps.LatLng(first.lat, first.lng));
+        }
+
+        clearMapMarkers(); // 기존 마커 지우기
+
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
             const content = document.createElement('div'); content.className = 'w-12 h-12 rounded-full border-2 border-white shadow-xl bg-cover bg-center cursor-pointer transition-transform hover:scale-110';
             content.style.backgroundImage = `url(${post.photos[0].url})`;
             content.addEventListener('click', () => openModal(post));
-            new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1.2 }).setMap(state.mapInstance);
+            const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1.2 });
+            overlay.setMap(state.mapInstance);
+            state.mapMarkers.push(overlay);
         });
     };
 
     const drawGoogleMap = (posts) => {
         if (DOM.mapLoader) DOM.mapLoader.classList.add('hidden');
         const first = posts.find(p => p.lat && p.lng) || {lat: 37.56, lng: 126.97};
-        state.mapInstance = new google.maps.Map(DOM.mapCanvas, { zoom: 6, center: { lat: parseFloat(first.lat), lng: parseFloat(first.lng) }, mapTypeControl: false });
+        if(!state.mapInstance) {
+            state.mapInstance = new google.maps.Map(DOM.mapCanvas, { zoom: 6, center: { lat: parseFloat(first.lat), lng: parseFloat(first.lng) }, mapTypeControl: false });
+        }
+
+        clearMapMarkers(); // 기존 마커 지우기
+
         posts.forEach(post => {
             if (!post.lat || !post.photos?.length) return;
-            new google.maps.Marker({ position: { lat: parseFloat(post.lat), lng: parseFloat(post.lng) }, map: state.mapInstance }).addListener("click", () => openModal(post));
+            const marker = new google.maps.Marker({ position: { lat: parseFloat(post.lat), lng: parseFloat(post.lng) }, map: state.mapInstance });
+            marker.addListener("click", () => openModal(post));
+            state.mapMarkers.push(marker);
         });
     };
 
@@ -346,36 +401,20 @@ window.Portfolio = (() => {
         img.onload = () => {
             const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
             const px = 120, pt = 120, pb = 400; canvas.width = img.width + (px * 2); canvas.height = img.height + pt + pb;
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, px, pt, img.width, img.height);
 
-            // 배경 및 원본 이미지 그리기
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, px, pt, img.width, img.height);
-
-            // [추가] 그리드가 켜져 있다면 Canvas 이미지 위에 3x3 라인을 그립니다.
             if (state.isGridActive) {
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.7)"; // 흰색 반투명 라인
-                ctx.lineWidth = Math.max(2, img.width * 0.002); // 해상도에 비례하는 선 굵기
-                ctx.beginPath();
-
-                // 세로 분할선 (1/3, 2/3)
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.7)"; ctx.lineWidth = Math.max(2, img.width * 0.002); ctx.beginPath();
                 ctx.moveTo(px + img.width / 3, pt); ctx.lineTo(px + img.width / 3, pt + img.height);
                 ctx.moveTo(px + (img.width * 2) / 3, pt); ctx.lineTo(px + (img.width * 2) / 3, pt + img.height);
-
-                // 가로 분할선 (1/3, 2/3)
                 ctx.moveTo(px, pt + img.height / 3); ctx.lineTo(px + img.width, pt + img.height / 3);
                 ctx.moveTo(px, pt + (img.height * 2) / 3); ctx.lineTo(px + img.width, pt + (img.height * 2) / 3);
-
                 ctx.stroke();
             }
 
-            // 하단 텍스트 및 QR 코드 렌더링
             ctx.fillStyle = "#111111"; ctx.font = "bold 60px Pretendard, sans-serif"; ctx.fillText(getTrans(photo.title), px, pt + img.height + 100);
             const qr = new QRious({ value: postUrl, size: 180, level: 'H' }); const qrImg = new Image(); qrImg.src = qr.toDataURL();
-            qrImg.onload = () => {
-                ctx.drawImage(qrImg, canvas.width - px - 180, pt + img.height + 80, 180, 180);
-                const link = document.createElement('a'); link.download = state.isGridActive ? `photo_grid.jpg` : `photo.jpg`;
-                link.href = canvas.toDataURL("image/jpeg", 0.95); link.click();
-            };
+            qrImg.onload = () => { ctx.drawImage(qrImg, canvas.width - px - 180, pt + img.height + 80, 180, 180); const link = document.createElement('a'); link.download = state.isGridActive ? `photo_grid.jpg` : `photo.jpg`; link.href = canvas.toDataURL("image/jpeg", 0.95); link.click(); };
         };
     };
 
@@ -384,6 +423,5 @@ window.Portfolio = (() => {
         else { navigator.clipboard.writeText(postUrl).then(() => showToast(window.I18N[state.lang].toastCopy || 'Link Copied!')); }
     };
 
-    // toggleGrid 함수를 외부 노출
     return { init, switchView, openModal, closeModal, nextPhoto, prevPhoto, toggleGrid, downloadFramedPhoto, sharePhoto, handleReaction };
 })();
