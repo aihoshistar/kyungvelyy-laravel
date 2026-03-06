@@ -12,7 +12,8 @@ window.Portfolio = (() => {
         mapLoaded: { kakao: false, google: false },
         fingerprint: null,
         isGridActive: false,
-        mapMarkers: []
+        mapMarkers: [],
+        lenis: null
     };
 
     let DOM = {};
@@ -28,7 +29,8 @@ window.Portfolio = (() => {
             modalDots: document.getElementById('modal-dots'), langBtns: document.querySelectorAll('.lang-btn'),
             filterBtns: document.querySelectorAll('.filter-btn'), themeToggleBtn: document.getElementById('theme-toggle'),
             toast: document.getElementById('toast'), btnGrid: document.getElementById('btn-grid-view'), btnMap: document.getElementById('btn-map-view'),
-            countryFilter: document.getElementById('country-filter'), cameraFilter: document.getElementById('camera-filter')
+            countryFilter: document.getElementById('country-filter'), cameraFilter: document.getElementById('camera-filter'),
+            shortcutOverlay: document.getElementById('shortcut-overlay')
         };
     };
 
@@ -51,13 +53,76 @@ window.Portfolio = (() => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
         });
 
+        initLenis();
         initFilters();
         bindEvents();
+        bindShortcuts();
         initTheme();
         updateLanguage(state.lang);
         document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('active'); revealObserver.observe(el); });
 
         checkUrlHash();
+    };
+
+    const initLenis = () => {
+        if (typeof Lenis !== 'undefined') {
+            state.lenis = new Lenis({
+                duration: 1.2,
+                easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+                direction: 'vertical',
+                gestureDirection: 'vertical',
+                smooth: true,
+                smoothTouch: false,
+                touchMultiplier: 2,
+            });
+
+            function raf(time) {
+                state.lenis.raf(time);
+                requestAnimationFrame(raf);
+            }
+            requestAnimationFrame(raf);
+        }
+    };
+
+    const bindShortcuts = () => {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            const key = e.key.toLowerCase();
+            const isModalOpen = !DOM.modal.classList.contains('hidden');
+
+            if (key === '?') {
+                toggleShortcutHelp();
+            } else if (key === 'd') {
+                toggleTheme();
+            } else if (key === 'f') {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+                else document.exitFullscreen();
+            } else if (!isModalOpen) {
+                if (key === 'g') switchView('grid');
+                else if (key === 'm') switchView('map');
+            }
+        });
+
+        if (DOM.shortcutOverlay) {
+            DOM.shortcutOverlay.addEventListener('click', (e) => {
+                if (e.target === DOM.shortcutOverlay) toggleShortcutHelp();
+            });
+        }
+    };
+
+    const toggleShortcutHelp = () => {
+        if (!DOM.shortcutOverlay) return;
+        const isHidden = DOM.shortcutOverlay.classList.contains('hidden');
+        if (isHidden) {
+            DOM.shortcutOverlay.classList.remove('hidden');
+            void DOM.shortcutOverlay.offsetWidth;
+            DOM.shortcutOverlay.classList.remove('opacity-0');
+            DOM.shortcutOverlay.children[0].classList.remove('scale-95');
+        } else {
+            DOM.shortcutOverlay.classList.add('opacity-0');
+            DOM.shortcutOverlay.children[0].classList.add('scale-95');
+            setTimeout(() => DOM.shortcutOverlay.classList.add('hidden'), 300);
+        }
     };
 
     const initFilters = () => {
@@ -104,10 +169,16 @@ window.Portfolio = (() => {
         DOM.modal.addEventListener('click', (e) => { if (e.target === DOM.modal) closeModal(); });
         
         document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (DOM.shortcutOverlay && !DOM.shortcutOverlay.classList.contains('hidden')) {
+                    toggleShortcutHelp();
+                } else if (!DOM.modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            }
             if (DOM.modal.classList.contains('hidden')) return;
             if (e.key === 'ArrowRight') nextPhoto(); 
             if (e.key === 'ArrowLeft') prevPhoto(); 
-            if (e.key === 'Escape') closeModal();
         });
 
         let touchStartX = 0;
@@ -120,19 +191,14 @@ window.Portfolio = (() => {
 
         DOM.modalContainer.addEventListener('touchend', (e) => {
             if (DOM.modal.classList.contains('hidden') || !state.activePost) return;
-            
             const touchEndX = e.changedTouches[0].screenX;
             const touchEndY = e.changedTouches[0].screenY;
-            
             const xDiff = touchStartX - touchEndX;
             const yDiff = touchStartY - touchEndY;
 
             if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 50) {
-                if (xDiff > 0) {
-                    nextPhoto();
-                } else {
-                    prevPhoto();
-                }
+                if (xDiff > 0) nextPhoto();
+                else prevPhoto();
             }
         }, { passive: true });
     };
@@ -160,9 +226,7 @@ window.Portfolio = (() => {
         const currentDictionary = window.I18N[lang];
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
-            if (currentDictionary && currentDictionary[key]) {
-                el.innerHTML = currentDictionary[key];
-            }
+            if (currentDictionary && currentDictionary[key]) el.innerHTML = currentDictionary[key];
         });
 
         if (state.viewMode === 'grid') renderGrid(); else renderMapMarkers();
@@ -205,15 +269,33 @@ window.Portfolio = (() => {
             card.style.transitionDelay = `${(index % 6) * 100}ms`;
             const catTranslation = window.I18N[state.lang][`cat${post.category}`] || post.category;
 
+            // [추가] Blur-up 효과: 처음엔 블러된 상태로 시작, 로드가 완료되면 JS로 블러를 품
             card.innerHTML = `
-                <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
-                    <img src="${post.photos[0].url}" crossorigin="anonymous" loading="lazy" class="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-1000 ease-spring opacity-90 group-hover:opacity-100">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 md:p-8">
+                <div class="rounded-xl theme-surface img-mask overflow-hidden w-full relative transition-colors duration-500 bg-gray-200 dark:bg-gray-800" style="aspect-ratio: ${post.photos[0].aspect_ratio || 1.5};">
+                    <!-- Blur Placeholder Skeleton -->
+                    <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-[1.5s]"></div>
+                    <!-- Actual Image with progressive fade-in -->
+                    <img crossorigin="anonymous" loading="lazy" class="grid-img absolute inset-0 w-full h-full object-cover transform scale-110 blur-xl opacity-0 transition-all duration-[1.2s] ease-out z-10 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 md:p-8 z-20">
                         <span class="text-xs md:text-sm font-bold tracking-[0.2em] text-white/80 uppercase mb-2">${catTranslation}</span>
                         <h4 class="text-white font-semibold text-xl md:text-2xl leading-snug drop-shadow-md">${getTrans(post.title)}</h4>
                     </div>
                 </div>
             `;
+            
+            const imgEl = card.querySelector('.grid-img');
+            const skeleton = card.querySelector('.skeleton-bg');
+
+            // [추가] 이미지가 로딩 완료되었을 때 실행되는 Blur-up 해제 로직
+            imgEl.onload = () => {
+                imgEl.classList.remove('scale-110', 'blur-xl', 'opacity-0');
+                imgEl.classList.add('scale-100', 'blur-0', 'opacity-90', 'group-hover:opacity-100');
+                if(skeleton) skeleton.style.opacity = '0';
+            };
+            
+            // src를 나중에 할당하여 브라우저가 캐싱된 이미지라도 onload 이벤트를 확실히 태우도록 함
+            imgEl.src = post.photos[0].url;
+
             card.addEventListener('click', () => window.Portfolio.openModal(post));
             DOM.grid.appendChild(card);
         });
@@ -315,9 +397,7 @@ window.Portfolio = (() => {
             const photoIndex = parts.length > 1 ? parseInt(parts[1], 10) : 0;
 
             const targetPost = state.posts.find(p => p.id == postId);
-            if (targetPost) {
-                setTimeout(() => openModal(targetPost, photoIndex), 500);
-            }
+            if (targetPost) setTimeout(() => openModal(targetPost, photoIndex), 500);
         }
     };
 
@@ -368,12 +448,12 @@ window.Portfolio = (() => {
     };
 
     const openModal = (post, initialIndex = 0) => {
+        if (state.lenis) state.lenis.stop();
         state.activePost = post;
         state.currentPhotoIndex = initialIndex;
         state.isGridActive = false;
 
         DOM.modalContainer.style.background = 'var(--color-surface)';
-
         renderActiveSlide();
         fetchReactions(post.photos[state.currentPhotoIndex].id);
 
@@ -384,7 +464,6 @@ window.Portfolio = (() => {
 
     const closeModal = () => {
         DOM.modalContainer.classList.add('scale-95'); DOM.modal.classList.add('opacity-0');
-
         history.replaceState(null, '', window.location.pathname + window.location.search);
 
         setTimeout(() => {
@@ -392,6 +471,7 @@ window.Portfolio = (() => {
             document.body.style.overflow = '';
             state.activePost = null;
             DOM.modalContainer.style.background = 'var(--color-surface)';
+            if (state.lenis) state.lenis.start();
         }, 500);
     };
 
@@ -416,7 +496,6 @@ window.Portfolio = (() => {
         history.replaceState(null, '', `#post-${post.id}/photo-${state.currentPhotoIndex}`);
 
         DOM.modalIndicator.textContent = `${String(state.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
-
         const titleStr = getTrans(photo.title);
         const catTranslation = dict[`cat${post.category}`] || post.category;
 
@@ -438,18 +517,18 @@ window.Portfolio = (() => {
         const performRender = () => {
             if (state.currentPhotoIndex !== targetIndex) return;
 
-            // [핵심 수정] 사진이 들어가는 컨테이너(id="photo-loupe-container")에 최소 높이(min-h-[40vh] md:min-h-[60vh])를 부여하여 레이아웃 무너짐 방지
+            // [추가] 모달창 안에서도 Blur-up 적용. 로딩 스피너 대신 배경의 부드러운 스켈레톤과 블러 이미지를 사용
             DOM.modalSliderContent.innerHTML = `
                 <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
-                    <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh]" id="photo-loupe-container">
-                        <!-- 이미지 로딩 중 공간을 유지하는 플레이스홀더 스켈레톤 (선택적) -->
-                        <div class="absolute inset-0 flex items-center justify-center text-white/20">
-                            <svg class="animate-spin h-8 w-8 hidden placeholder-loader" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        </div>
-                        <img id="active-photo-img" crossorigin="anonymous" src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair z-10 relative">
+                    <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh] rounded-lg overflow-hidden bg-black/10" id="photo-loupe-container">
+                        
+                        <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
+                        
+                        <!-- Blur-up Image -->
+                        <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair z-10 relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
 
                         <div id="photo-loupe" class="loupe hidden md:block overflow-hidden z-20">
-                            <img id="loupe-inner-img" crossorigin="anonymous" src="${photo.url}" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
+                            <img id="loupe-inner-img" crossorigin="anonymous" class="absolute max-w-none" style="pointer-events: none; object-fit: contain;">
                         </div>
 
                         <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 z-30 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
@@ -505,18 +584,20 @@ window.Portfolio = (() => {
                 const imgEl = document.getElementById('active-photo-img');
                 const loupeEl = document.getElementById('photo-loupe');
                 const loupeInner = document.getElementById('loupe-inner-img');
-                const loader = DOM.modalSliderContent.querySelector('.placeholder-loader');
+                const skeleton = DOM.modalSliderContent.querySelector('.skeleton-bg');
 
                 if(imgEl && loupeEl && loupeInner) {
+                    // 블러 업을 완성하는 트리거
                     const initVisuals = () => {
+                        imgEl.classList.remove('scale-[1.02]', 'blur-lg', 'opacity-0');
+                        imgEl.classList.add('scale-100', 'blur-0', 'opacity-100');
                         applyColorFeatures(imgEl);
-                        if(loader) loader.classList.add('hidden');
+                        if(skeleton) skeleton.classList.add('opacity-0');
                     };
                     
                     if (imgEl.complete) {
                         initVisuals();
                     } else {
-                        if(loader) loader.classList.remove('hidden');
                         imgEl.addEventListener('load', initVisuals);
                     }
 
@@ -538,6 +619,12 @@ window.Portfolio = (() => {
                     });
                 }
                 
+                // 실제 이미지 URL 삽입 (여기서 로딩 시작)
+                if (imgEl) {
+                    imgEl.src = photo.url;
+                    if (loupeInner) loupeInner.src = photo.url;
+                }
+                
                 if (post.photos.length > 1) {
                     const nextIdx = (targetIndex + 1) % post.photos.length;
                     const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
@@ -553,8 +640,8 @@ window.Portfolio = (() => {
         if (preloader.complete) {
             setTimeout(performRender, 50);
         } else {
-            preloader.onload = performRender;
-            preloader.onerror = performRender; 
+            // 프리로더 대신 화면부터 그려서 블러-업 효과를 바로 볼 수 있게 변경
+            performRender();
         }
     };
 

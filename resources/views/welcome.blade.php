@@ -17,6 +17,8 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
+    <!-- [추가] 부드러운 스무스 스크롤링을 위한 Lenis 라이브러리 추가 -->
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -207,6 +209,26 @@
             <div class="absolute bottom-6 w-full flex justify-center md:hidden pointer-events-none">
                 <div class="flex space-x-2" id="modal-dots"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- [추가] Keyboard Shortcuts Overlay -->
+    <div id="shortcut-overlay" class="fixed inset-0 z-[110] hidden bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300 flex items-center justify-center">
+        <div class="bg-surface border theme-border rounded-2xl p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6 border-b theme-border pb-4">
+                <h3 class="text-lg font-bold theme-text tracking-wide flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Pro Shortcuts
+                </h3>
+                <span class="text-xs font-bold px-2 py-1 bg-blue-500/20 text-blue-400 rounded tracking-widest">GEEK</span>
+            </div>
+            <ul class="space-y-4">
+                <li class="flex justify-between items-center"><span class="theme-text-muted text-sm font-medium">Grid View</span><kbd class="px-2 py-1 bg-black/50 border theme-border rounded text-xs theme-text font-mono shadow-inner">G</kbd></li>
+                <li class="flex justify-between items-center"><span class="theme-text-muted text-sm font-medium">Map View</span><kbd class="px-2 py-1 bg-black/50 border theme-border rounded text-xs theme-text font-mono shadow-inner">M</kbd></li>
+                <li class="flex justify-between items-center"><span class="theme-text-muted text-sm font-medium">Dark Mode Toggle</span><kbd class="px-2 py-1 bg-black/50 border theme-border rounded text-xs theme-text font-mono shadow-inner">D</kbd></li>
+                <li class="flex justify-between items-center"><span class="theme-text-muted text-sm font-medium">Fullscreen</span><kbd class="px-2 py-1 bg-black/50 border theme-border rounded text-xs theme-text font-mono shadow-inner">F</kbd></li>
+                <li class="flex justify-between items-center"><span class="theme-text-muted text-sm font-medium">Show / Hide Help</span><kbd class="px-2 py-1 bg-black/50 border theme-border rounded text-xs theme-text font-mono shadow-inner">?</kbd></li>
+            </ul>
         </div>
     </div>
 
