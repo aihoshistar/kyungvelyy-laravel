@@ -1,6 +1,6 @@
 window.Portfolio = (() => {
     let state = {
-        lang: window.CURRENT_LOCALE || 'ko', // Laravel 로케일 상속
+        lang: window.CURRENT_LOCALE || 'ko',
         category: 'all',
         posts: window.PORTFOLIO_DATA || [],
         activePost: null,
@@ -8,7 +8,8 @@ window.Portfolio = (() => {
         viewMode: 'grid',
         mapInstance: null,
         mapLoaded: { kakao: false, google: false },
-        fingerprint: null
+        fingerprint: null,
+        isGridActive: false // [추가] 3x3 분할선 활성화 상태
     };
 
     let DOM = {};
@@ -73,14 +74,12 @@ window.Portfolio = (() => {
 
     const updateLanguage = (lang) => {
         state.lang = lang;
-        // 언어 버튼 스타일 업데이트
         DOM.langBtns.forEach(btn => {
             btn.classList.toggle('theme-text', btn.dataset.lang === lang);
             btn.classList.toggle('font-bold', btn.dataset.lang === lang);
             btn.classList.toggle('theme-text-muted', btn.dataset.lang !== lang);
         });
 
-        // 텍스트 교체 (window.I18N 활용)
         const currentDictionary = window.I18N[lang];
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
@@ -174,9 +173,27 @@ window.Portfolio = (() => {
         } catch (e) { console.error('Reaction sync failed'); }
     };
 
+    // [추가] 3x3 분할선 토글 함수
+    const toggleGrid = () => {
+        state.isGridActive = !state.isGridActive;
+        const gridOverlay = document.getElementById('grid-overlay');
+        const btnIcon = document.getElementById('grid-btn-icon');
+        if (gridOverlay) {
+            gridOverlay.classList.toggle('opacity-0', !state.isGridActive);
+            gridOverlay.classList.toggle('opacity-100', state.isGridActive);
+
+            // 버튼 아이콘 색상 변경 효과 (활성화 시 강조)
+            if(state.isGridActive) btnIcon.classList.replace('text-white', 'text-blue-400');
+            else btnIcon.classList.replace('text-blue-400', 'text-white');
+        }
+    };
+
     const openModal = (post) => {
-        state.activePost = post; state.currentPhotoIndex = 0; renderActiveSlide();
+        state.activePost = post; state.currentPhotoIndex = 0;
+        state.isGridActive = false; // 모달 열때는 그리드 초기화
+        renderActiveSlide();
         fetchReactions(post.photos[0].id);
+
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
         DOM.modalContainer.classList.remove('scale-95');
@@ -218,9 +235,30 @@ window.Portfolio = (() => {
         const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post.id}`;
         const safePhotoData = JSON.stringify(photo).replace(/"/g, '&quot;');
 
+        // [수정] 이미지 컨테이너 영역에 3x3 그리드 DOM 추가
         DOM.modalSliderContent.innerHTML = `
-            <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter bg-black/5 dark:bg-black/20">
-                <img src="${photo.url}" class="max-w-full max-h-full object-contain rounded-lg shadow-xl">
+            <div class="w-full md:w-[65%] h-[50vh] md:h-auto flex items-center justify-center p-4 md:p-10 slide-fade-enter bg-black/5 dark:bg-black/20 relative">
+
+                <!-- 이미지를 감싸는 타이트한 컨테이너 (비율 유지 및 오버레이 밀착) -->
+                <div class="relative inline-block max-w-full max-h-full">
+                    <img src="${photo.url}" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block">
+
+                    <!-- 3x3 그리드 오버레이 (기본 숨김) -->
+                    <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
+                        <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
+                        <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
+                        <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 33.33%;"></div>
+                        <div class="absolute top-0 bottom-0 w-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="left: 66.66%;"></div>
+                    </div>
+
+                    <!-- 그리드 토글 버튼 (우측 상단) -->
+                    <button onclick="window.Portfolio.toggleGrid()" class="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full border border-white/20 transition-all shadow-lg" title="3x3 분할선 보기">
+                        <svg id="grid-btn-icon" class="w-4 h-4 transition-colors duration-300 ${state.isGridActive ? 'text-blue-400' : 'text-white'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16M8 4v16M16 4v16"></path>
+                        </svg>
+                    </button>
+                </div>
+
             </div>
             <div class="w-full md:w-[35%] flex flex-col justify-center p-8 md:p-10 space-y-6 slide-fade-enter overflow-y-auto">
                 <div class="space-y-3">
@@ -303,15 +341,41 @@ window.Portfolio = (() => {
     };
 
     const downloadFramedPhoto = (photoDataStr, postUrl) => {
-        showToast(window.I18N[state.lang].toastWait || '준비 중입니다...');
+        showToast(window.I18N[state.lang].toastWait || '프레임을 생성하는 중입니다...');
         const photo = JSON.parse(photoDataStr); const img = new Image(); img.crossOrigin = "Anonymous"; img.src = photo.url;
         img.onload = () => {
             const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
             const px = 120, pt = 120, pb = 400; canvas.width = img.width + (px * 2); canvas.height = img.height + pt + pb;
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, px, pt, img.width, img.height);
+
+            // 배경 및 원본 이미지 그리기
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, px, pt, img.width, img.height);
+
+            // [추가] 그리드가 켜져 있다면 Canvas 이미지 위에 3x3 라인을 그립니다.
+            if (state.isGridActive) {
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.7)"; // 흰색 반투명 라인
+                ctx.lineWidth = Math.max(2, img.width * 0.002); // 해상도에 비례하는 선 굵기
+                ctx.beginPath();
+
+                // 세로 분할선 (1/3, 2/3)
+                ctx.moveTo(px + img.width / 3, pt); ctx.lineTo(px + img.width / 3, pt + img.height);
+                ctx.moveTo(px + (img.width * 2) / 3, pt); ctx.lineTo(px + (img.width * 2) / 3, pt + img.height);
+
+                // 가로 분할선 (1/3, 2/3)
+                ctx.moveTo(px, pt + img.height / 3); ctx.lineTo(px + img.width, pt + img.height / 3);
+                ctx.moveTo(px, pt + (img.height * 2) / 3); ctx.lineTo(px + img.width, pt + (img.height * 2) / 3);
+
+                ctx.stroke();
+            }
+
+            // 하단 텍스트 및 QR 코드 렌더링
             ctx.fillStyle = "#111111"; ctx.font = "bold 60px Pretendard, sans-serif"; ctx.fillText(getTrans(photo.title), px, pt + img.height + 100);
             const qr = new QRious({ value: postUrl, size: 180, level: 'H' }); const qrImg = new Image(); qrImg.src = qr.toDataURL();
-            qrImg.onload = () => { ctx.drawImage(qrImg, canvas.width - px - 180, pt + img.height + 80, 180, 180); const link = document.createElement('a'); link.download = `photo.jpg`; link.href = canvas.toDataURL("image/jpeg", 0.95); link.click(); };
+            qrImg.onload = () => {
+                ctx.drawImage(qrImg, canvas.width - px - 180, pt + img.height + 80, 180, 180);
+                const link = document.createElement('a'); link.download = state.isGridActive ? `photo_grid.jpg` : `photo.jpg`;
+                link.href = canvas.toDataURL("image/jpeg", 0.95); link.click();
+            };
         };
     };
 
@@ -320,5 +384,6 @@ window.Portfolio = (() => {
         else { navigator.clipboard.writeText(postUrl).then(() => showToast(window.I18N[state.lang].toastCopy || 'Link Copied!')); }
     };
 
-    return { init, switchView, openModal, closeModal, nextPhoto, prevPhoto, downloadFramedPhoto, sharePhoto, handleReaction };
+    // toggleGrid 함수를 외부 노출
+    return { init, switchView, openModal, closeModal, nextPhoto, prevPhoto, toggleGrid, downloadFramedPhoto, sharePhoto, handleReaction };
 })();
