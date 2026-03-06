@@ -12,7 +12,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Node.js 빌드 (에셋 빌드 결과물만 전송하기 위함)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -23,7 +22,6 @@ jobs:
           npm install
           npm run build
 
-      # 2. 배포 패키지 구성 (vendor, node_modules 제외)
       - name: Prepare Deployment Files
         run: |
           rm -rf deploy
@@ -36,11 +34,9 @@ jobs:
                     --exclude='.github' \
                     . ./deploy/
 
-          # 필수 폴더 구조 생성 (서버에서 에러 방지)
           mkdir -p ./deploy/storage/framework/{cache/data,sessions,views}
           mkdir -p ./deploy/storage/logs
 
-      # 3. 변경된 소스코드 및 빌드된 에셋만 FTP 전송 (매우 빠름)
       - name: Sync Files to Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -48,13 +44,13 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/
-          server-dir: ./
+          # [수정] 서버의 트리 구조에 맞춰 public_html 폴더로 전송
+          server-dir: public_html/
           exclude: |
             **/.git*
             **/.git*/**
             .env
 
-      # 4. SSH를 통해 서버에서 직접 Composer 설치 및 캐시 최적화
       - name: Post-Deployment Commands via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -63,10 +59,16 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: 22
           script: |
-            cd domains/kkyungvelyy.com
-            # 서버에서 직접 라이브러리 설치 (FTP보다 훨씬 빠름)
-            composer install --no-dev --optimize-autoloader --no-interaction
-            # 라라벨 최적화 명령어
+            # [수정] 이동 경로를 public_html로 변경
+            cd domains/kkyungvelyy.com/public_html
+
+            # [해결책] --no-scripts를 추가하여 설치 단계와 스크립트 실행 단계를 분리합니다.
+            # 기존 vendor가 꼬여있을 수 있으므로 안전을 위해 삭제 후 재설치를 권장할 수 있으나,
+            # 속도를 위해 우선 스크립트 실행만 억제합니다.
+            composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+            # 수동으로 패키지 발견 및 캐시 최적화 실행
+            php artisan package:discover --ansi
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
