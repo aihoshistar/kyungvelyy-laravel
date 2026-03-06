@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
-
+use App\Http\Controllers\MonitoringController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -42,3 +42,5 @@ Route::prefix('api')->group(function () {
     Route::get('/photos/{photo}/reactions', [PostController::class, 'getReactions']);
     Route::post('/photos/{photo}/react', [PostController::class, 'toggleReaction']);
 });
+
+Route::get('/admin/logs/monitoring-dashboard', [MonitoringController::class, 'index'])->name('admin.monitoring');
