@@ -86,4 +86,23 @@ class AdminManageController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
+
+    // [추가] 앨범 및 속한 사진 삭제 (API)
+    public function destroyPost($id)
+    {
+        if (!session('is_admin')) return response()->json(['error' => 'Unauthorized'], 403);
+
+        try {
+            $post = Post::findOrFail($id);
+            
+            // 앨범에 속한 사진 데이터들도 DB에서 삭제 (S3 파일은 별도 배치나 이벤트로 처리하는 것이 안전함)
+            Photo::where('post_id', $id)->delete();
+            $post->delete();
+
+            return response()->json(['success' => true, 'message' => 'Album deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error("Post Delete Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 }

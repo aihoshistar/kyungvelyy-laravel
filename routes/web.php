@@ -41,3 +41,4 @@ Route::get('/admin/manage', [AdminManageController::class, 'index']);
 Route::get('/admin/api/posts', [AdminManageController::class, 'getPosts']);
 Route::put('/admin/api/posts/{id}', [AdminManageController::class, 'updatePost']);
 Route::put('/admin/api/photos/{id}', [AdminManageController::class, 'updatePhoto']);
+Route::delete('/admin/api/posts/{id}', [AdminManageController::class, 'destroyPost']);

@@ -55,7 +55,11 @@
                             <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                             앨범 메타데이터
                         </h2>
-                        <button id="save-album-btn" class="bg-white text-black px-4 py-1.5 rounded-md text-xs font-bold tracking-widest hover:bg-gray-200 transition">앨범 정보 저장</button>
+                        <!-- [추가] 저장 및 삭제 버튼 그룹 -->
+                        <div class="flex gap-2">
+                            <button id="delete-album-btn" type="button" data-confirm="false" class="bg-red-500/10 text-red-400 border border-red-500/30 px-4 py-1.5 rounded-md text-xs font-bold tracking-widest hover:bg-red-500 hover:text-white transition">앨범 삭제</button>
+                            <button id="save-album-btn" type="button" class="bg-white text-black px-4 py-1.5 rounded-md text-xs font-bold tracking-widest hover:bg-gray-200 transition">앨범 정보 저장</button>
+                        </div>
                     </div>
                     <form id="album-form" class="space-y-4">
                         <input type="hidden" id="post-id">
@@ -92,18 +96,19 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-10 right-10 transform bg-white text-black px-6 py-3 rounded-full shadow-2xl font-bold text-sm z-[100] transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
-        성공적으로 저장되었습니다!
+        성공적으로 처리되었습니다!
     </div>
 
     <script>
         let allPosts = [];
         let activePost = null;
+        let deleteConfirmTimeout = null;
 
         const DOM = {
             list: document.getElementById('album-list'), search: document.getElementById('search-input'),
             editorEmpty: document.getElementById('editor-empty'), editorContainer: document.getElementById('editor-container'),
             photosContainer: document.getElementById('photos-container'), toast: document.getElementById('toast'),
-            btnSaveAlbum: document.getElementById('save-album-btn'),
+            btnSaveAlbum: document.getElementById('save-album-btn'), btnDeleteAlbum: document.getElementById('delete-album-btn'),
             album: {
                 id: document.getElementById('post-id'), cat: document.getElementById('post-category'), country: document.getElementById('post-country'),
                 date: document.getElementById('post-date'), lat: document.getElementById('post-lat'), lng: document.getElementById('post-lng'),
@@ -149,9 +154,18 @@
             });
         };
 
+        const resetDeleteButton = () => {
+            clearTimeout(deleteConfirmTimeout);
+            DOM.btnDeleteAlbum.dataset.confirm = 'false';
+            DOM.btnDeleteAlbum.textContent = '앨범 삭제';
+            DOM.btnDeleteAlbum.classList.replace('bg-red-600', 'bg-red-500/10');
+            DOM.btnDeleteAlbum.classList.replace('text-white', 'text-red-400');
+        };
+
         const loadEditor = (post) => {
             activePost = post;
-            renderList(allPosts); // Update active state in sidebar
+            renderList(allPosts); 
+            resetDeleteButton(); // 에디터 로드 시 삭제 버튼 초기화
 
             DOM.editorEmpty.classList.add('hidden');
             DOM.editorContainer.classList.remove('hidden');
@@ -206,6 +220,52 @@
                 DOM.photosContainer.appendChild(pEl);
             });
         };
+
+        // [추가] Album Delete Logic (Double Click Confirm)
+        DOM.btnDeleteAlbum.addEventListener('click', async () => {
+            const id = DOM.album.id.value;
+            if(!id) return;
+
+            // 1단계: 안전 확인 상태 진입
+            if (DOM.btnDeleteAlbum.dataset.confirm !== 'true') {
+                DOM.btnDeleteAlbum.dataset.confirm = 'true';
+                DOM.btnDeleteAlbum.textContent = '정말 삭제하시겠습니까?';
+                DOM.btnDeleteAlbum.classList.replace('bg-red-500/10', 'bg-red-600');
+                DOM.btnDeleteAlbum.classList.replace('text-red-400', 'text-white');
+
+                // 3초 후 원래 버튼으로 원상복구
+                deleteConfirmTimeout = setTimeout(resetDeleteButton, 3000);
+                return;
+            }
+
+            // 2단계: 실제 삭제 진행 (3초 안에 한 번 더 클릭했을 때)
+            clearTimeout(deleteConfirmTimeout);
+            DOM.btnDeleteAlbum.textContent = '삭제 중...';
+
+            try {
+                const res = await fetch(`/admin/api/posts/${id}`, {
+                    method: 'DELETE', 
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                });
+                const data = await res.json();
+                
+                if(data.success) { 
+                    showToast('앨범이 성공적으로 삭제되었습니다.');
+                    
+                    // UI 초기화 및 목록 갱신
+                    DOM.editorContainer.classList.add('hidden');
+                    DOM.editorEmpty.classList.remove('hidden');
+                    activePost = null;
+                    fetchPosts(); 
+                } else {
+                    showToast(data.error, true);
+                }
+            } catch(e) { 
+                showToast('네트워크 오류가 발생했습니다.', true); 
+            }
+            
+            resetDeleteButton();
+        });
 
         // Save Album Meta
         DOM.btnSaveAlbum.addEventListener('click', async () => {
