@@ -100,3 +100,6 @@
     .theme-filter-inactive { background-color: var(--color-surface); color: var(--color-text-muted); border-color: var(--color-border); }
     .theme-filter-inactive:hover { color: var(--color-text-main); border-color: var(--color-text-muted); }
 }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

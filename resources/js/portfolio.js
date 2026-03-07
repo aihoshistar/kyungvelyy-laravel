@@ -49,9 +49,9 @@ window.Portfolio = (() => {
         state.fingerprint = id;
 
         const i18nFallback = {
-            ko: { filterAllCountries: '모든 장소', filterAllCameras: '모든 카메라', filterAllLenses: '모든 렌즈', colorPalette: 'Color Palette' },
-            en: { filterAllCountries: 'All Locations', filterAllCameras: 'All Cameras', filterAllLenses: 'All Lenses', colorPalette: 'Color Palette' },
-            ja: { filterAllCountries: 'すべての場所', filterAllCameras: 'すべてのカメラ', filterAllLenses: 'すべてのレンズ', colorPalette: 'Color Palette' }
+            ko: { filterAllYears: '모든 연도', filterAllCountries: '모든 국가', filterAllCameras: '모든 기종', filterAllLenses: '모든 렌즈', colorPalette: 'Color Palette' },
+            en: { filterAllYears: 'All Years', filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras', filterAllLenses: 'All Lenses', colorPalette: 'Color Palette' },
+            ja: { filterAllYears: 'すべての年', filterAllCountries: 'すべての国', filterAllCameras: 'すべてのカメラ', filterAllLenses: 'すべてのレンズ', colorPalette: 'Color Palette' }
         };
         ['ko', 'en', 'ja'].forEach(l => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
@@ -107,6 +107,7 @@ window.Portfolio = (() => {
     };
 
     const initFilters = () => {
+        // [수정] DB에서 연도(Year)와 렌즈(Lens) 정보 동적 추출
         const years = [...new Set(state.posts.map(p => p.taken_at ? p.taken_at.substring(0, 4) : null).filter(Boolean))].sort().reverse();
         const countries = [...new Set(state.posts.map(p => p.country).filter(Boolean))].sort();
         const cameras = [...new Set(state.posts.flatMap(p => p.photos.map(ph => ph.exif_body)).filter(Boolean))].sort();
@@ -217,6 +218,7 @@ window.Portfolio = (() => {
         return state.posts.filter(p => {
             const matchCat = state.category === 'all' || p.category === state.category;
             const matchCountry = state.country === 'all' || p.country === state.country;
+            // [수정] 연도 및 렌즈 필터링 로직 추가 적용
             const matchYear = state.year === 'all' || (p.taken_at && p.taken_at.startsWith(state.year));
             const matchCamera = state.camera === 'all' || (p.photos && p.photos.some(ph => ph.exif_body === state.camera));
             const matchLens = state.lens === 'all' || (p.photos && p.photos.some(ph => ph.exif_lens === state.lens));
@@ -532,12 +534,9 @@ window.Portfolio = (() => {
                     
                     <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
                     
-                    <!-- [핵심 수정] inline-flex를 사용하여 래퍼가 이미지의 실제 렌더링 크기에 완벽하게 밀착하도록 변경 -->
                     <div class="relative inline-flex items-center justify-center max-w-full max-h-full z-10">
-                        <!-- 이미지에 100% 강제 확장을 제거하여 고유 비율을 유지 -->
                         <img id="active-photo-img" crossorigin="anonymous" class="block w-auto h-auto max-w-full max-h-[45vh] md:max-h-[75vh] object-contain rounded-lg shadow-xl cursor-crosshair transform scale-[1.02] blur-lg opacity-0 transition-all duration-[0.8s] ease-out">
 
-                        <!-- 그리드 오버레이가 밀착된 래퍼의 크기(inset-0)를 정확히 따라감 -->
                         <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
                             <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
                             <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>

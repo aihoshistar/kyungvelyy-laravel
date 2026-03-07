@@ -113,13 +113,13 @@
 
         <!-- Gallery & Advanced Controls -->
         <div id="gallery-controls" class="flex flex-col mb-10 space-y-5 reveal">
-            <div class="flex flex-col md:flex-row md:items-end justify-between space-y-4 md:space-y-0">
+            <div class="flex flex-col xl:flex-row xl:items-end justify-between space-y-4 xl:space-y-0">
                 <div class="flex items-center space-x-6">
                     <div>
                         <h3 class="text-xs uppercase tracking-[0.2em] theme-text-muted font-semibold mb-2">Selected Works</h3>
                         <h2 class="text-3xl font-bold theme-text tracking-tight transition-colors" id="section-title" data-i18n="galleryTitle">{{ __('portfolio.galleryTitle') }}</h2>
                     </div>
-                    <div class="bg-surface border theme-border rounded-full p-1 flex shadow-sm">
+                    <div class="bg-surface border theme-border rounded-full p-1 flex shadow-sm shrink-0">
                         <button id="btn-grid-view" class="p-2 rounded-full transition-all view-toggle-active" onclick="window.Portfolio.switchView('grid')">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                         </button>
@@ -129,18 +129,29 @@
                     </div>
                 </div>
 
-                <!-- 필터 통합 바 (카테고리 + 고급 드롭다운) -->
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="flex space-x-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar" id="category-filters">
+                <!-- [수정] 스크롤 가능한 통합 필터 바 (Category + Year + Location + Camera + Lens) -->
+                <div class="flex items-center gap-3 overflow-x-auto hide-scrollbar pb-2 xl:pb-0 w-full xl:w-auto">
+                    <div class="flex space-x-2 shrink-0" id="category-filters">
                         <button class="filter-btn active px-5 py-2 rounded-full text-sm font-semibold theme-filter-active border transition-colors" data-category="all" data-i18n="catAll">{{ __('portfolio.catAll') }}</button>
                         <button class="filter-btn px-5 py-2 rounded-full text-sm font-medium theme-filter-inactive border transition-colors" data-category="Landscape" data-i18n="catLandscape">{{ __('portfolio.catLandscape') }}</button>
                         <button class="filter-btn px-5 py-2 rounded-full text-sm font-medium theme-filter-inactive border transition-colors" data-category="Cityscape" data-i18n="catCityscape">{{ __('portfolio.catCityscape') }}</button>
                     </div>
 
-                    <div class="hidden md:block w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
+                    <div class="w-px h-5 bg-gray-300 dark:bg-gray-700 shrink-0 mx-1"></div>
 
-                    <div class="flex space-x-2">
-                        <div class="relative">
+                    <!-- 세부 필터들 (알약 형태) -->
+                    <div class="flex space-x-2 shrink-0 pr-4 xl:pr-0">
+                        <!-- 연도 필터 -->
+                        <div class="relative shrink-0">
+                            <select id="year-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                                <option value="all" data-i18n="filterAllYears">모든 연도</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <!-- 국가 필터 -->
+                        <div class="relative shrink-0">
                             <select id="country-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
                                 <option value="all" data-i18n="filterAllCountries">모든 국가</option>
                             </select>
@@ -148,11 +159,21 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div class="relative">
-                            <select id="camera-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                        <!-- 기종 필터 -->
+                        <div class="relative shrink-0">
+                            <select id="camera-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[140px] truncate">
                                 <option value="all" data-i18n="filterAllCameras">모든 기종</option>
                             </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <!-- 렌즈 필터 -->
+                        <div class="relative shrink-0">
+                            <select id="lens-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[160px] truncate">
+                                <option value="all" data-i18n="filterAllLenses">모든 렌즈</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
@@ -180,7 +201,6 @@
     <div id="photo-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm overflow-hidden opacity-0 flex items-center justify-center select-none transition-opacity duration-500">
         <div id="modal-container" class="relative w-[95%] max-w-7xl h-[85vh] md:h-[80vh] theme-surface rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-transform duration-500 scale-95">
             
-            <!-- [해결] shrink-0를 주어 상단 헤더가 찌그러지지 않게 방지 -->
             <div class="w-full flex justify-between items-center px-6 py-5 border-b theme-border bg-opacity-50 z-[60] shrink-0">
                 <div class="flex flex-col">
                     <span id="modal-indicator" class="text-xs md:text-sm font-bold tracking-[0.3em] theme-text-muted uppercase mb-1">01 / 05</span>
@@ -191,7 +211,6 @@
                 </button>
             </div>
             
-            <!-- [해결] 모바일에서는 세로 스크롤(overflow-y-auto)을 허용하여 이미지가 글씨를 침범하지 않게 분리 -->
             <div class="flex-grow overflow-y-auto overflow-x-hidden md:overflow-hidden relative w-full">
                 <button onclick="window.Portfolio.prevPhoto()" class="nav-btn absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full theme-text hidden md:flex z-[70] items-center justify-center transition-all shadow-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -200,7 +219,6 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
                 
-                <!-- [해결] 모바일에서 높이가 자연스럽게 늘어나도록 h-full 대신 min-h-full 사용 -->
                 <div id="modal-slider-content" class="w-full min-h-full md:h-full flex flex-col md:flex-row items-stretch"></div>
             </div>
             
@@ -210,7 +228,7 @@
         </div>
     </div>
 
-    <!-- [추가] Keyboard Shortcuts Overlay -->
+    <!-- Keyboard Shortcuts Overlay -->
     <div id="shortcut-overlay" class="fixed inset-0 z-[110] hidden bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300 flex items-center justify-center">
         <div class="bg-surface border theme-border rounded-2xl p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-transform duration-300">
             <div class="flex justify-between items-center mb-6 border-b theme-border pb-4">
