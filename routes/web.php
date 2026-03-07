@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\AdminManageController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -34,3 +36,8 @@ Route::prefix('api')->group(function () {
 Route::get('/admin/logs/monitoring-dashboard', [MonitoringController::class, 'index'])->name('admin.monitoring');
 Route::get('/admin/upload', [\App\Http\Controllers\AdminController::class, 'uploadView']);
 Route::post('/admin/upload-process', [\App\Http\Controllers\AdminController::class, 'processUpload']);
+
+Route::get('/admin/manage', [AdminManageController::class, 'index']);
+Route::get('/admin/api/posts', [AdminManageController::class, 'getPosts']);
+Route::put('/admin/api/posts/{id}', [AdminManageController::class, 'updatePost']);
+Route::put('/admin/api/photos/{id}', [AdminManageController::class, 'updatePhoto']);
