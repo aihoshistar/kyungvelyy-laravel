@@ -2,8 +2,10 @@ window.Portfolio = (() => {
     let state = {
         lang: window.CURRENT_LOCALE || 'ko',
         category: 'all',
+        year: 'all',      
         country: 'all',
         camera: 'all',
+        lens: 'all',      
         posts: window.PORTFOLIO_DATA || [],
         activePost: null,
         currentPhotoIndex: 0,
@@ -28,7 +30,10 @@ window.Portfolio = (() => {
             modalDots: document.getElementById('modal-dots'), langBtns: document.querySelectorAll('.lang-btn'),
             filterBtns: document.querySelectorAll('.filter-btn'), themeToggleBtn: document.getElementById('theme-toggle'),
             toast: document.getElementById('toast'), btnGrid: document.getElementById('btn-grid-view'), btnMap: document.getElementById('btn-map-view'),
-            countryFilter: document.getElementById('country-filter'), cameraFilter: document.getElementById('camera-filter'),
+            yearFilter: document.getElementById('year-filter'), 
+            countryFilter: document.getElementById('country-filter'), 
+            cameraFilter: document.getElementById('camera-filter'),
+            lensFilter: document.getElementById('lens-filter'), 
             shortcutOverlay: document.getElementById('shortcut-overlay')
         };
     };
@@ -44,9 +49,9 @@ window.Portfolio = (() => {
         state.fingerprint = id;
 
         const i18nFallback = {
-            ko: { filterAllCountries: '모든 국가', filterAllCameras: '모든 기종', colorPalette: 'Color Palette' },
-            en: { filterAllCountries: 'All Countries', filterAllCameras: 'All Cameras', colorPalette: 'Color Palette' },
-            ja: { filterAllCountries: 'すべての国', filterAllCameras: 'すべてのカメラ', colorPalette: 'Color Palette' }
+            ko: { filterAllCountries: '모든 장소', filterAllCameras: '모든 카메라', filterAllLenses: '모든 렌즈', colorPalette: 'Color Palette' },
+            en: { filterAllCountries: 'All Locations', filterAllCameras: 'All Cameras', filterAllLenses: 'All Lenses', colorPalette: 'Color Palette' },
+            ja: { filterAllCountries: 'すべての場所', filterAllCameras: 'すべてのカメラ', filterAllLenses: 'すべてのレンズ', colorPalette: 'Color Palette' }
         };
         ['ko', 'en', 'ja'].forEach(l => {
             window.I18N[l] = { ...i18nFallback[l], ...window.I18N[l] };
@@ -102,32 +107,28 @@ window.Portfolio = (() => {
     };
 
     const initFilters = () => {
+        const years = [...new Set(state.posts.map(p => p.taken_at ? p.taken_at.substring(0, 4) : null).filter(Boolean))].sort().reverse();
         const countries = [...new Set(state.posts.map(p => p.country).filter(Boolean))].sort();
         const cameras = [...new Set(state.posts.flatMap(p => p.photos.map(ph => ph.exif_body)).filter(Boolean))].sort();
+        const lenses = [...new Set(state.posts.flatMap(p => p.photos.map(ph => ph.exif_lens)).filter(Boolean))].sort();
 
-        if (DOM.countryFilter) {
-            countries.forEach(c => {
+        const appendOptions = (selectEl, dataArray) => {
+            if (!selectEl) return;
+            dataArray.forEach(item => {
                 const option = document.createElement('option');
-                option.value = c; option.textContent = c;
-                DOM.countryFilter.appendChild(option);
+                option.value = item; option.textContent = item;
+                selectEl.appendChild(option);
             });
-            DOM.countryFilter.addEventListener('change', (e) => {
-                state.country = e.target.value;
+            selectEl.addEventListener('change', (e) => {
+                state[selectEl.id.replace('-filter', '')] = e.target.value;
                 if (state.viewMode === 'grid') renderGrid(); else initHybridMap();
             });
-        }
+        };
 
-        if (DOM.cameraFilter) {
-            cameras.forEach(c => {
-                const option = document.createElement('option');
-                option.value = c; option.textContent = c;
-                DOM.cameraFilter.appendChild(option);
-            });
-            DOM.cameraFilter.addEventListener('change', (e) => {
-                state.camera = e.target.value;
-                if (state.viewMode === 'grid') renderGrid(); else initHybridMap();
-            });
-        }
+        appendOptions(DOM.yearFilter, years);
+        appendOptions(DOM.countryFilter, countries);
+        appendOptions(DOM.cameraFilter, cameras);
+        appendOptions(DOM.lensFilter, lenses);
     };
 
     const bindEvents = () => {
@@ -216,8 +217,11 @@ window.Portfolio = (() => {
         return state.posts.filter(p => {
             const matchCat = state.category === 'all' || p.category === state.category;
             const matchCountry = state.country === 'all' || p.country === state.country;
+            const matchYear = state.year === 'all' || (p.taken_at && p.taken_at.startsWith(state.year));
             const matchCamera = state.camera === 'all' || (p.photos && p.photos.some(ph => ph.exif_body === state.camera));
-            return matchCat && matchCountry && matchCamera;
+            const matchLens = state.lens === 'all' || (p.photos && p.photos.some(ph => ph.exif_lens === state.lens));
+            
+            return matchCat && matchCountry && matchYear && matchCamera && matchLens;
         });
     };
 
@@ -270,7 +274,7 @@ window.Portfolio = (() => {
             };
 
             imgEl.onload = initGridVisuals;
-            imgEl.src = post.photos[0].url; // [최적화] src를 HTML에 직접 적지 않고 여기서 1번만 주입하여 단일 호출
+            imgEl.src = post.photos[0].url; 
             
             if (imgEl.complete && imgEl.naturalWidth > 0) {
                 initGridVisuals();
@@ -381,13 +385,33 @@ window.Portfolio = (() => {
         }
     };
 
+    const updateReactionUI = () => {
+        if (!state.activePost) return;
+        const photo = state.activePost.photos[state.currentPhotoIndex];
+        if (!photo) return;
+        
+        const container = document.getElementById('reactions-container');
+        if (!container) return;
+
+        const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
+        
+        container.innerHTML = reactions.map(r => {
+            const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
+            const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
+            return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
+        }).join('');
+    };
+
     const fetchReactions = async (photoId) => {
         try {
             const response = await fetch(`/api/photos/${photoId}/reactions`, { headers: { 'Accept': 'application/json' } });
             if (response.ok) {
                 const data = await response.json();
                 const photo = state.activePost.photos[state.currentPhotoIndex];
-                if (photo && photo.id === photoId) { photo.reaction_counts = data.counts; renderActiveSlide(); }
+                if (photo && photo.id === photoId) { 
+                    photo.reaction_counts = data.counts; 
+                    updateReactionUI();
+                }
             }
         } catch (e) { console.log('Reactions fetch skipped'); }
     };
@@ -401,7 +425,8 @@ window.Portfolio = (() => {
 
         if (hasReacted) { photo.reaction_counts[type] = Math.max(0, (photo.reaction_counts[type] || 1) - 1); localStorage.removeItem(storageKey); }
         else { photo.reaction_counts[type] = (photo.reaction_counts[type] || 0) + 1; localStorage.setItem(storageKey, 'true'); }
-        renderActiveSlide();
+        
+        updateReactionUI();
 
         try {
             const response = await fetch(`/api/photos/${photoId}/react`, {
@@ -410,7 +435,9 @@ window.Portfolio = (() => {
                 body: JSON.stringify({ type: type, fingerprint: state.fingerprint })
             });
             if (response.ok) {
-                const data = await response.json(); photo.reaction_counts = data.counts; renderActiveSlide();
+                const data = await response.json(); 
+                photo.reaction_counts = data.counts; 
+                updateReactionUI();
             }
         } catch (e) { console.error('Reaction sync failed'); }
     };
@@ -437,12 +464,17 @@ window.Portfolio = (() => {
         fetchReactions(post.photos[state.currentPhotoIndex].id);
 
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
-        void DOM.modal.offsetWidth; DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
+        void DOM.modal.offsetWidth; 
+        DOM.modal.classList.add('opacity-100'); 
+        DOM.modal.classList.remove('opacity-0');
+        
         DOM.modalContainer.classList.remove('scale-95');
+        DOM.modalContainer.classList.add('scale-100');
     };
 
     const closeModal = () => {
-        DOM.modalContainer.classList.add('scale-95'); DOM.modal.classList.add('opacity-0');
+        DOM.modal.classList.remove('opacity-100');
+        DOM.modal.classList.add('opacity-0');
         history.replaceState(null, '', window.location.pathname + window.location.search);
 
         setTimeout(() => {
@@ -450,7 +482,10 @@ window.Portfolio = (() => {
             document.body.style.overflow = '';
             state.activePost = null;
             DOM.modalContainer.style.background = 'var(--color-surface)';
-        }, 500);
+            
+            DOM.modalContainer.classList.remove('scale-100');
+            DOM.modalContainer.classList.add('scale-95');
+        }, 300);
     };
 
     const nextPhoto = () => {
@@ -487,25 +522,22 @@ window.Portfolio = (() => {
         if (photo.exif_shutter_speed_num && photo.exif_shutter_speed_den) exifArr.push(`${photo.exif_shutter_speed_num}/${photo.exif_shutter_speed_den}s`);
         if (photo.exif_iso) exifArr.push(`ISO ${photo.exif_iso}`);
 
-        const reactions = [{ key: 'love', icon: '❤️' }, { key: 'fire', icon: '🔥' }, { key: 'inspired', icon: '✨' }, { key: 'calm', icon: '🧘' }];
-        
-        DOM.modalSliderContent.style.transition = 'opacity 0.2s ease-in-out';
-        DOM.modalSliderContent.style.opacity = '0';
-        
         const targetIndex = state.currentPhotoIndex;
         
-        // [최적화] 중복 호출의 원인이 되었던 외부 preloader 로직을 완전히 삭제하고, 바로 렌더링을 시작합니다.
         if (state.currentPhotoIndex !== targetIndex) return;
 
         DOM.modalSliderContent.innerHTML = `
-            <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-10 relative shrink-0">
-                <div class="relative flex items-center justify-center w-full min-h-[40vh] md:min-h-[60vh] rounded-lg overflow-hidden bg-black/10" id="photo-loupe-container">
+            <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-6 relative shrink-0 h-[45vh] md:h-full">
+                <div class="relative flex items-center justify-center w-full h-full rounded-lg overflow-hidden bg-black/5" id="photo-loupe-container">
                     
                     <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
                     
-                    <div class="relative inline-block max-w-full z-10">
-                        <img id="active-photo-img" crossorigin="anonymous" class="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-lg shadow-xl block cursor-crosshair relative transform scale-[1.02] blur-lg opacity-0 transition-all duration-[1.2s] ease-out">
+                    <!-- [핵심 수정] inline-flex를 사용하여 래퍼가 이미지의 실제 렌더링 크기에 완벽하게 밀착하도록 변경 -->
+                    <div class="relative inline-flex items-center justify-center max-w-full max-h-full z-10">
+                        <!-- 이미지에 100% 강제 확장을 제거하여 고유 비율을 유지 -->
+                        <img id="active-photo-img" crossorigin="anonymous" class="block w-auto h-auto max-w-full max-h-[45vh] md:max-h-[75vh] object-contain rounded-lg shadow-xl cursor-crosshair transform scale-[1.02] blur-lg opacity-0 transition-all duration-[0.8s] ease-out">
 
+                        <!-- 그리드 오버레이가 밀착된 래퍼의 크기(inset-0)를 정확히 따라감 -->
                         <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${state.isGridActive ? 'opacity-100' : 'opacity-0'}">
                             <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
                             <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 66.66%;"></div>
@@ -523,7 +555,7 @@ window.Portfolio = (() => {
                     </button>
                 </div>
             </div>
-            <div class="w-full md:w-[35%] flex flex-col justify-center p-6 md:p-10 space-y-8">
+            <div class="w-full md:w-[35%] flex flex-col justify-center p-6 md:p-10 space-y-8 overflow-y-auto">
                 <div class="space-y-4">
                     <h3 class="text-2xl md:text-3xl font-bold theme-text leading-tight">${titleStr}</h3>
                     <p class="theme-text-muted font-light text-base md:text-lg leading-relaxed">${getTrans(photo.description) || ''}</p>
@@ -539,13 +571,10 @@ window.Portfolio = (() => {
                     </div>
                 </div>
 
-                <div class="flex flex-wrap gap-2 pt-2">
-                    ${reactions.map(r => {
-                        const count = (photo.reaction_counts && photo.reaction_counts[r.key]) || 0;
-                        const isActive = localStorage.getItem(`reacted_${photo.id}_${r.key}`);
-                        return `<button onclick="window.Portfolio.handleReaction('${r.key}', ${photo.id})" class="reaction-btn flex items-center space-x-2 px-4 py-2 rounded-full border theme-border theme-surface ${isActive ? 'active' : ''}"><span class="text-lg">${r.icon}</span><span class="text-sm font-medium theme-text-muted transition-colors">${count}</span></button>`;
-                    }).join('')}
+                <div id="reactions-container" class="flex flex-wrap gap-2 pt-2">
+                    <!-- JS Injected: Reaction UI -->
                 </div>
+                
                 <div class="pt-6 border-t theme-border grid grid-cols-2 gap-6">
                     <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifCamera || 'Camera'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_body || '-'}</span></div>
                     <div class="flex flex-col"><span class="text-xs theme-text-muted uppercase font-bold mb-1">${dict.exifLens || 'Lens'}</span><span class="theme-text text-sm font-medium truncate">${photo.exif_lens || '-'}</span></div>
@@ -557,11 +586,10 @@ window.Portfolio = (() => {
                 </div>
             </div>
         `;
+        
+        updateReactionUI();
 
         requestAnimationFrame(() => {
-            void DOM.modalSliderContent.offsetWidth;
-            DOM.modalSliderContent.style.opacity = '1';
-
             const imgEl = document.getElementById('active-photo-img');
             const loupeEl = document.getElementById('photo-loupe');
             const loupeInner = document.getElementById('loupe-inner-img');
@@ -574,12 +602,11 @@ window.Portfolio = (() => {
                     applyColorFeatures(imgEl);
                     if(skeleton) skeleton.classList.add('opacity-0');
                     
-                    // [최적화] 메인 이미지가 완전히 불러와진 이후에 돋보기 이미지에 동일한 캐시 주소를 주입 (중복 네트워크 방지)
                     loupeInner.src = photo.url;
                 };
                 
                 imgEl.onload = initVisuals;
-                imgEl.src = photo.url; // 여기서 네트워크 통신은 단 1번만 일어납니다.
+                imgEl.src = photo.url; 
 
                 if (imgEl.complete && imgEl.naturalWidth > 0) {
                     initVisuals();
@@ -603,7 +630,6 @@ window.Portfolio = (() => {
                 });
             }
             
-            // [최적화] 다음/이전 사진 프리로딩 시 반드시 CORS 설정을 붙여서 캐시 분리 현상을 막습니다.
             if (post.photos.length > 1) {
                 const nextIdx = (targetIndex + 1) % post.photos.length;
                 const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
