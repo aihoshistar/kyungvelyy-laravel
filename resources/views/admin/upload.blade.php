@@ -24,6 +24,14 @@
         
         <!-- Left: Upload Controller -->
         <div class="w-full md:w-1/3 flex flex-col gap-6">
+            
+            <!-- [추가] 기존 앨범에 이어 올리기 위한 Post ID 입력란 -->
+            <div class="bg-[#111] border border-white/10 rounded-2xl p-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Attach to Existing Album (Optional)</label>
+                <input type="number" id="existing-post-id" placeholder="e.g. 10" class="w-full bg-black border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition placeholder-gray-700">
+                <p class="text-xs text-gray-500 mt-2">끊겼던 작업이나 기존 앨범에 사진을 추가하려면 해당 Post ID를 입력하세요. 비워두면 새 앨범이 생성됩니다.</p>
+            </div>
+
             <div class="bg-[#111] border border-white/10 rounded-2xl p-6">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Location Hint</label>
                 <input type="text" id="location-hint" value="서울특별시 중구 을지로 (힙지로)" class="w-full bg-black border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition">
@@ -32,7 +40,7 @@
 
             <div class="bg-[#111] border border-white/10 rounded-2xl p-6 flex-grow flex flex-col">
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Select Photos (JPEG/RAW)</label>
-                <div id="drop-zone" class="border-2 border-dashed border-white/20 rounded-xl flex-grow flex flex-col items-center justify-center p-8 text-center hover:bg-white/5 hover:border-white/40 transition cursor-pointer">
+                <div id="drop-zone" class="border-2 border-dashed border-white/20 rounded-xl flex-grow flex flex-col items-center justify-center p-8 text-center hover:bg-white/5 hover:border-white/40 transition cursor-pointer min-h-[150px]">
                     <svg class="w-10 h-10 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                     <span class="text-sm font-medium text-gray-300">Click or Drop photos here</span>
                     <input type="file" id="file-input" multiple accept="image/jpeg, image/png, image/jpg" class="hidden">
@@ -62,6 +70,7 @@
         const uploadBtn = document.getElementById('upload-btn');
         const logContainer = document.getElementById('log-container');
         const locationHint = document.getElementById('location-hint');
+        const existingPostIdInput = document.getElementById('existing-post-id'); // [추가] 요소 선택
         let selectedFiles = [];
 
         let currentPostId = null;
@@ -106,9 +115,14 @@
             uploadBtn.setAttribute('disabled', 'true');
             uploadBtn.textContent = 'PROCESSING...';
             
-            log(`\n🚀 Starting batch upload process (${selectedFiles.length} files)...`, 'info');
-
-            currentPostId = null;
+            // 💡 [핵심] 사용자가 입력한 기존 앨범 ID가 있다면 가져오고, 없으면 null 처리
+            currentPostId = existingPostIdInput.value.trim() || null;
+            
+            if (currentPostId) {
+                log(`\n🚀 Starting batch upload (Attaching to Post ID: ${currentPostId})...`, 'info');
+            } else {
+                log(`\n🚀 Starting batch upload process (Creating New Album)...`, 'info');
+            }
 
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
@@ -116,9 +130,8 @@
                 
                 let uploadSuccess = false;
                 let retryCount = 0;
-                let currentWaitTime = 30000; // 초기 대기 시간: 30초
+                let currentWaitTime = 30000;
 
-                // 💡 [수정] maxRetries를 없애고 성공할 때까지 무한 반복
                 while (!uploadSuccess) {
                     const formData = new FormData();
                     formData.append('photo', file);
@@ -138,6 +151,7 @@
                         const data = await response.json();
 
                         if (response.ok && data.success) {
+                            // 💡 기존 앨범 ID를 입력했다면 처음부터 else 블록을 타서 'Attached' 로그가 찍힙니다.
                             if (!currentPostId) {
                                 currentPostId = data.post_id;
                                 log(`✅ Album Created: [Post ID: ${currentPostId}]`, 'success');
@@ -145,7 +159,7 @@
                                 log(`✅ Photo attached to Album [Post ID: ${currentPostId}]`, 'success');
                             }
                             log(`   -> Title: ${data.data.title.ko}`);
-                            uploadSuccess = true; // 성공 시 while 루프 탈출
+                            uploadSuccess = true;
                         } else {
                             const errorMsg = data.error || 'Unknown error';
                             
@@ -153,14 +167,11 @@
                                 retryCount++;
                                 log(`⚠️ Rate Limit Hit! API 허용량 초과. ${currentWaitTime / 1000}초 대기 후 재시도합니다... (${retryCount}번째 재시도)`, 'warn');
                                 
-                                // 현재 설정된 시간만큼 대기
                                 await new Promise(r => setTimeout(r, currentWaitTime));
-                                
-                                // 💡 [핵심] 다음 실패를 대비해 대기 시간을 2배로 증가 (최대 30분까지만 증가하도록 제한)
                                 currentWaitTime = Math.min(currentWaitTime * 2, 1800000); 
                             } else {
                                 log(`❌ Error: ${errorMsg}`, 'error');
-                                break; // API 제한이 아닌 다른 심각한 에러(S3 용량 초과 등)는 루프 탈출
+                                break; 
                             }
                         }
                     } catch (error) {
@@ -169,7 +180,6 @@
                     }
                 }
 
-                // 성공적으로 업로드되었고, 마지막 사진이 아니라면 기본 대기 시간(20초) 적용
                 if (uploadSuccess && i < selectedFiles.length - 1) {
                     log('⏳ Waiting 20s to avoid Rate Limit...', 'warn');
                     await new Promise(r => setTimeout(r, 20000));
@@ -178,7 +188,9 @@
 
             log('\n✨ Batch processing completed.', 'success');
             
+            // 초기화
             currentPostId = null; 
+            existingPostIdInput.value = ''; // 입력란도 비워줍니다.
             
             uploadBtn.textContent = 'UPLOAD COMPLETED';
             setTimeout(() => { uploadBtn.textContent = 'START BATCH UPLOAD'; updateUI(); }, 3000);
