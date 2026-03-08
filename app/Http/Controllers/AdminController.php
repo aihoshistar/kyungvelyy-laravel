@@ -95,7 +95,20 @@ class AdminController extends Controller
                 throw new \Exception("GEMINI_API_KEY가 .env 파일에 설정되지 않았습니다.");
             }
 
-            $prompt = "You are a professional photographer's assistant. [User Input Location]: {$locationHint}. Analyze the provided image and generate metadata. The response MUST be a valid JSON object matching exactly this structure: {\"title\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"location\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"description\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"category\": \"Landscape|Cityscape|Portrait\", \"country\": \"English Country Name\"}";
+            $prompt = "You are a professional photographer's assistant. [User Input Location]: {$locationHint}. Analyze the provided image and generate metadata.
+                [Guidelines]
+                1. Tone & Style: Write the 'description' in a calm, professional, and artistic documentary style.
+                2. Korean Language Rule: For the 'ko' description, ALWAYS end sentences with formal written style endings such as '~이다.', '~한다.', '~다.' (Do NOT use '~습니다' or '~해요').
+                3. Accuracy: Base the description strictly on the visual elements of the image and the provided location hint.
+
+                The response MUST be a valid JSON object matching exactly this structure:
+                {
+                    \"title\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
+                    \"location\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
+                    \"description\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
+                    \"category\": \"Landscape|Cityscape|Portrait\",
+                    \"country\": \"English Country Name\"
+            }";
 
             $response = Http::timeout(60)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={$geminiKey}", [
                 'contents' => [
