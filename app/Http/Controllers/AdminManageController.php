@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache; // 💡 Cache 파사드 추가
 
 class AdminManageController extends Controller
 {
@@ -50,6 +51,9 @@ class AdminManageController extends Controller
                 'location' => json_decode($safeLocation, true),
             ]);
 
+            // 💡 앨범이 수정되면 캐시 삭제
+            Cache::forget('portfolio_posts');
+
             return response()->json(['success' => true, 'message' => 'Album updated successfully']);
         } catch (\Exception $e) {
             Log::error("Post Update Error: " . $e->getMessage());
@@ -87,7 +91,6 @@ class AdminManageController extends Controller
         }
     }
 
-    // [추가] 앨범 및 속한 사진 삭제 (API)
     public function destroyPost($id)
     {
         if (!session('is_admin')) return response()->json(['error' => 'Unauthorized'], 403);
@@ -98,6 +101,9 @@ class AdminManageController extends Controller
             // 앨범에 속한 사진 데이터들도 DB에서 삭제 (S3 파일은 별도 배치나 이벤트로 처리하는 것이 안전함)
             Photo::where('post_id', $id)->delete();
             $post->delete();
+
+            // 💡 앨범이 삭제되어도 캐시 삭제
+            Cache::forget('portfolio_posts');
 
             return response()->json(['success' => true, 'message' => 'Album deleted successfully']);
         } catch (\Exception $e) {

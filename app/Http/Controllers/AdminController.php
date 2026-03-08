@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache; // 💡 Cache 파사드 추가
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -38,8 +39,7 @@ class AdminController extends Controller
         $request->validate([
             'photo'         => 'required|image|mimes:jpeg,png,jpg|max:51200',
             'location_hint' => 'nullable|string',
-            // 프론트엔드에서 post_id를 보냈을 때 해당 id가 posts 테이블에 있는지 검증
-            'post_id'       => 'nullable|exists:posts,id' 
+            'post_id'       => 'nullable|exists:posts,id'
         ]);
 
         try {
@@ -183,10 +183,13 @@ class AdminController extends Controller
                 'exif_iso'                 => $iso,
             ]);
 
+            // 💡 [핵심] 업로드가 완료되면 프론트엔드 캐시를 지워서 다음 접속자가 최신 사진을 보게 만듭니다.
+            Cache::forget('portfolio_posts');
+
             return response()->json([
                 'success' => true,
                 'message' => "Successfully uploaded & analyzed: {$originalName}",
-                'post_id' => $post->id, // 프론트엔드에 그룹화된 앨범 ID를 돌려줍니다.
+                'post_id' => $post->id,
                 'data' => $aiData
             ]);
 

@@ -2,10 +2,67 @@
 <html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>KKYOUNG.PHOTO | Park Kyoung Seo</title>
+    
+    <!-- ========================================== -->
+    <!-- 🚀 1. 기본 SEO 메타 태그 -->
+    <!-- ========================================== -->
+    <title>KKYOUNG.PHOTO | {{ __('portfolio.meta_title') ?? 'Park Kyoung Seo' }}</title>
+    <meta name="description" content="{{ trans()->has('portfolio.meta_desc') ? __('portfolio.meta_desc') : '구조를 설계하고, 균형을 기록합니다. 개발자의 시선으로 담아낸 세상의 기하학. KKYOUNG.PHOTO 사진 포트폴리오.' }}">
+    <meta name="keywords" content="사진작가, 포트폴리오, 박경서, KKYOUNG, 블록체인 개발자, 풍경사진, 도시사진, Photographer, Developer, 서울">
+    <meta name="author" content="Park Kyoung Seo">
+    <meta name="robots" content="index, follow">
 
+    <!-- ========================================== -->
+    <!-- 🌍 2. 다국어 SEO 최적화 (hreflang) -->
+    <!-- 검색 엔진에 언어별 페이지가 따로 있음을 알림 -->
+    <!-- ========================================== -->
+    <link rel="canonical" href="{{ url('/' . app()->getLocale()) }}">
+    <link rel="alternate" hreflang="ko" href="{{ url('/ko') }}">
+    <link rel="alternate" hreflang="en" href="{{ url('/en') }}">
+    <link rel="alternate" hreflang="ja" href="{{ url('/ja') }}">
+    <link rel="alternate" hreflang="x-default" href="{{ url('/ko') }}"> <!-- 기본 언어 설정 -->
+
+    <!-- ========================================== -->
+    <!-- 🔗 3. Open Graph (카카오톡, 페이스북 공유 썸네일) -->
+    <!-- ========================================== -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/' . app()->getLocale()) }}">
+    <meta property="og:title" content="KKYOUNG.PHOTO | Archive of Light">
+    <meta property="og:description" content="{{ trans()->has('portfolio.meta_desc') ? __('portfolio.meta_desc') : '개발자의 시선으로 담아낸 세상의 기하학.' }}">
+    <meta property="og:image" content="https://photo.kkyungvelyy.com/photo/profile.jpg"> <!-- 공유 시 표시될 메인 썸네일 이미지 -->
+    <meta property="og:site_name" content="KKYOUNG.PHOTO">
+    <meta property="og:locale" content="{{ app()->getLocale() === 'ko' ? 'ko_KR' : (app()->getLocale() === 'ja' ? 'ja_JP' : 'en_US') }}">
+
+    <!-- ========================================== -->
+    <!-- 🐦 4. Twitter Cards (트위터/X 공유 썸네일) -->
+    <!-- ========================================== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="KKYOUNG.PHOTO | Archive of Light">
+    <meta name="twitter:description" content="구조를 설계하고, 균형을 기록합니다.">
+    <meta name="twitter:image" content="https://photo.kkyungvelyy.com/photo/profile.jpg">
+
+    <!-- ========================================== -->
+    <!-- 🤖 5. 구글 구조화된 데이터 (JSON-LD) -->
+    <!-- 구글 검색 시 프로필, 직업, 소셜 링크를 명확히 인지하게 함 -->
+    <!-- ========================================== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Park Kyoung Seo",
+      "url": "{{ url('/') }}",
+      "image": "https://photo.kkyungvelyy.com/photo/profile.jpg",
+      "jobTitle": "Blockchain Infra Engineer & Photographer",
+      "sameAs": [
+        "https://github.com/aihoshistar",
+        "https://www.instagram.com/kkyoung.photo"
+      ]
+    }
+    </script>
+
+    <!-- 테마 설정 스크립트 -->
     <script>
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -52,7 +109,7 @@
                     <span class="opacity-30">·</span>
                     <a href="/ja" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'ja' ? 'theme-text font-bold' : '' }}">JA</a>
                 </div>
-                <button id="theme-toggle" class="p-2 rounded-full theme-btn-hover theme-text transition-colors duration-300">
+                <button id="theme-toggle" class="p-2 rounded-full theme-btn-hover theme-text transition-colors duration-300" aria-label="Toggle Dark Mode">
                     <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <svg id="theme-toggle-dark-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 </button>
@@ -101,7 +158,7 @@
                             <li>
                                 <a href="https://ai-agent-photo-sky.vercel.app" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 text-sm font-medium hover:theme-text transition-colors w-fit">
                                     <span class="w-1.5 h-1.5 rounded-full bg-current opacity-40 group-hover:opacity-100 transition-opacity"></span>
-                                    AI Agent Photo Sky
+                                    Atmos(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)
                                     <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                 </a>
                             </li>
@@ -120,16 +177,16 @@
                         <h2 class="text-3xl font-bold theme-text tracking-tight transition-colors" id="section-title" data-i18n="galleryTitle">{{ __('portfolio.galleryTitle') }}</h2>
                     </div>
                     <div class="bg-surface border theme-border rounded-full p-1 flex shadow-sm shrink-0">
-                        <button id="btn-grid-view" class="p-2 rounded-full transition-all view-toggle-active" onclick="window.Portfolio.switchView('grid')">
+                        <button id="btn-grid-view" aria-label="Grid View" class="p-2 rounded-full transition-all view-toggle-active" onclick="window.Portfolio.switchView('grid')">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                         </button>
-                        <button id="btn-map-view" class="p-2 rounded-full transition-all view-toggle-inactive" onclick="window.Portfolio.switchView('map')">
+                        <button id="btn-map-view" aria-label="Map View" class="p-2 rounded-full transition-all view-toggle-inactive" onclick="window.Portfolio.switchView('map')">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- [수정] 스크롤 가능한 통합 필터 바 (Category + Year + Location + Camera + Lens) -->
+                <!-- 스크롤 가능한 통합 필터 바 (Category + Year + Location + Camera + Lens) -->
                 <div class="flex items-center gap-3 overflow-x-auto hide-scrollbar pb-2 xl:pb-0 w-full xl:w-auto">
                     <div class="flex space-x-2 shrink-0" id="category-filters">
                         <button class="filter-btn active px-5 py-2 rounded-full text-sm font-semibold theme-filter-active border transition-colors" data-category="all" data-i18n="catAll">{{ __('portfolio.catAll') }}</button>
@@ -143,7 +200,7 @@
                     <div class="flex space-x-2 shrink-0 pr-4 xl:pr-0">
                         <!-- 연도 필터 -->
                         <div class="relative shrink-0">
-                            <select id="year-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                            <select id="year-filter" aria-label="Filter by Year" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
                                 <option value="all" data-i18n="filterAllYears">모든 연도</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
@@ -152,7 +209,7 @@
                         </div>
                         <!-- 국가 필터 -->
                         <div class="relative shrink-0">
-                            <select id="country-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
+                            <select id="country-filter" aria-label="Filter by Country" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
                                 <option value="all" data-i18n="filterAllCountries">모든 국가</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
@@ -161,7 +218,7 @@
                         </div>
                         <!-- 기종 필터 -->
                         <div class="relative shrink-0">
-                            <select id="camera-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[140px] truncate">
+                            <select id="camera-filter" aria-label="Filter by Camera" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[140px] truncate">
                                 <option value="all" data-i18n="filterAllCameras">모든 기종</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
@@ -170,7 +227,7 @@
                         </div>
                         <!-- 렌즈 필터 -->
                         <div class="relative shrink-0">
-                            <select id="lens-filter" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[160px] truncate">
+                            <select id="lens-filter" aria-label="Filter by Lens" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[160px] truncate">
                                 <option value="all" data-i18n="filterAllLenses">모든 렌즈</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">

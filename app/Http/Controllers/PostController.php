@@ -4,22 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Photo;
+use App\Models\Reaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache; // 💡 캐시 파사드 추가
 
 class PostController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * 메인 갤러리 페이지 렌더링
      */
     public function index($locale)
     {
-        // [수정] 최신 포스트(created_at 기준 내림차순)를 먼저 가져오도록 정렬 추가
-        $posts = Post::with(['photos' => function($query) {
-            // 포스트 내부의 여러 사진들은 order(순서)에 맞춰 정방향 정렬
-            $query->orderBy('id', 'asc');
-        }])
-        ->orderBy('taken_at', 'desc') // 최신 게시물이 위로 오게 (내림차순)
-        ->get();
+        // 💡 [핵심] DB 조회 결과를 'portfolio_posts'라는 이름으로 영구 캐싱합니다.
+        // 관리자가 사진을 올리거나 수정할 때만 이 캐시가 지워지므로, 
+        // 평소 방문자들은 DB를 거치지 않고 즉시(0.001초) 데이터를 받게 됩니다!
+        $posts = Cache::rememberForever('portfolio_posts', function () {
+            return Post::with(['photos' => function($query) {
+                // 포스트 내부의 여러 사진들은 order(순서) 또는 id에 맞춰 정방향 정렬
+                $query->orderBy('id', 'asc');
+            }])
+            ->orderBy('taken_at', 'desc') // 최신 게시물이 위로 오게 (내림차순)
+            ->get();
+        });
 
         return view('welcome', compact('posts'));
     }
@@ -64,54 +70,5 @@ class PostController extends Controller
         return response()->json([
             'counts' => $photo->reaction_counts
         ]);
-    }
-
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Post $post)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Post $post)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Post $post)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Post $post)
-    {
-        //
     }
 }
