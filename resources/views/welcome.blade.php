@@ -240,11 +240,13 @@
     <!-- Footer -->
     <footer class="border-t theme-border py-16 md:py-24 bg-surface/30 backdrop-blur-sm">
         <div class="max-w-7xl mx-auto px-6">
-            <!-- 메인 푸터 그리드 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-16 mb-16">
+            <!-- 메인 푸터 그리드: [수정] items-start 추가로 헤더들의 수평 정렬 일치시킴 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-16 mb-16 items-start">
+                
                 <!-- Brand & Description -->
                 <div class="lg:col-span-1">
-                    <a href="#" class="theme-text font-bold tracking-[0.2em] text-sm uppercase block mb-6">KKYOUNG.PHOTO</a>
+                    <!-- [수정] 텍스트 크기와 하단 여백/테두리를 동일하게 맞춰 수평 정렬 해결 -->
+                    <a href="#" class="theme-text font-bold tracking-[0.2em] text-xs uppercase inline-block mb-6 border-b theme-border pb-2">KKYOUNG.PHOTO</a>
                     <p class="theme-text-muted text-sm leading-relaxed">
                         기록되지 않은 찰나는 망각에 가깝습니다.<br class="hidden sm:block">
                         빛과 균형을 통해 세상의 질서를 기록하는<br class="hidden sm:block">
