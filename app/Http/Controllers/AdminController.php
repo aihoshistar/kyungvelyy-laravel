@@ -88,7 +88,7 @@ class AdminController extends Controller
             $optimizedData = $image->toJpeg(90)->toString();
             $base64Image = base64_encode($optimizedData);
 
-            // 3. Gemini 2.5 Flash를 이용한 AI 분석
+            // 3. Gemini 3.1 Flash Lite Preview를 이용한 AI 분석
             $geminiKey = env('GEMINI_API_KEY');
             
             if (!$geminiKey) {
@@ -97,7 +97,7 @@ class AdminController extends Controller
 
             $prompt = "You are a professional photographer's assistant. [User Input Location]: {$locationHint}. Analyze the provided image and generate metadata. The response MUST be a valid JSON object matching exactly this structure: {\"title\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"location\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"description\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"}, \"category\": \"Landscape|Cityscape|Portrait\", \"country\": \"English Country Name\"}";
 
-            $response = Http::timeout(60)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$geminiKey}", [
+            $response = Http::timeout(60)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={$geminiKey}", [
                 'contents' => [
                     ['parts' => [
                         ['text' => $prompt],
