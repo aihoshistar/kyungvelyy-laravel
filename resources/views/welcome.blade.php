@@ -137,7 +137,6 @@
                     </div>
                     <div class="space-y-6 text-lg md:text-xl leading-relaxed theme-text-muted font-light lg:border-l theme-border lg:pl-12">
                         <p data-i18n="heroBioText3">{{ __('portfolio.heroBioText3') }}</p>
-                        <p class="italic theme-text font-medium opacity-80 pt-4">"The intersection of code and light is where I record the world."</p>
                     </div>
                 </div>
             </div>
@@ -165,15 +164,27 @@
                         </a>
                     </div>
                 </div>
+                
+                <!-- 💡 다국어 속성 적용 (Header) -->
                 <div class="space-y-4">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50">Projects & Websites</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="projectsTitle">{{ __('portfolio.projectsTitle') ?? 'Projects & Websites' }}</span>
                     <ul class="space-y-4">
                         <li>
                             <a href="https://ai-agent-photo-sky.vercel.app" target="_blank" rel="noopener noreferrer" class="group flex items-start gap-3 text-sm font-medium hover:theme-text transition-all w-fit theme-text-muted">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-60 group-hover:opacity-100 transition-opacity mt-2 shrink-0"></span>
                                 <span class="leading-relaxed">
                                     <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">Atmos</span>
-                                    <span class="text-xs font-normal block opacity-60">(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectAtmosDesc">{{ __('portfolio.projectAtmosDesc') ?? '(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)' }}</span>
+                                </span>
+                                <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://ai-nd-calculator.vercel.app/" target="_blank" rel="noopener noreferrer" class="group flex items-start gap-3 text-sm font-medium hover:theme-text transition-all w-fit theme-text-muted">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-60 group-hover:opacity-100 transition-opacity mt-2 shrink-0"></span>
+                                <span class="leading-relaxed">
+                                    <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">ND PRO Calc</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectNdCalcDesc">{{ __('portfolio.projectNdCalcDesc') ?? '(장노출 사진작가를 위한 스마트 ND 필터 노출 계산기)' }}</span>
                                 </span>
                                 <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -195,7 +206,7 @@
                         </div>
                         <div class="bg-surface border theme-border rounded-full p-1 flex shadow-sm shrink-0">
                             <button id="btn-grid-view" aria-label="Grid View" class="p-2 rounded-full transition-all view-toggle-active" onclick="window.Portfolio.switchView('grid')">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"></path></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                             </button>
                             <button id="btn-map-view" aria-label="Map View" class="p-2 rounded-full transition-all view-toggle-inactive" onclick="window.Portfolio.switchView('map')">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
