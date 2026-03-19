@@ -5,13 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache; // 💡 Cache 파사드 추가
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use App\Services\GeminiVisionService; // 💡 서비스 클래스 Import 추가
 
 class AdminController extends Controller
 {
@@ -52,11 +51,11 @@ class AdminController extends Controller
             $make = $exif['Make'] ?? 'Unknown';
             $model = $exif['Model'] ?? 'Unknown';
             $lens = $exif['UndefinedTag:0xA434'] ?? ($exif['LensModel'] ?? 'Unknown Lens');
-            
+
             $focalLength = $this->evalFraction($exif['FocalLength'] ?? null);
             $aperture = $this->evalFraction($exif['FNumber'] ?? null);
             $iso = $exif['ISOSpeedRatings'] ?? null;
-            
+
             $shutterNum = null; $shutterDen = null;
             if (isset($exif['ExposureTime'])) {
                 $parts = explode('/', $exif['ExposureTime']);
@@ -76,65 +75,28 @@ class AdminController extends Controller
 
             $cameraBrand = stripos($make, 'nikon') !== false ? 'Nikon' : (stripos($make, 'sony') !== false ? 'Sony' : 'Other');
 
-            // 2. 이미지 최적화
+            // --- 2. 원본 이미지 S3 저장용 최적화 (기존과 동일) ---
             $manager = new ImageManager(new Driver());
             $image = $manager->read($file->getRealPath());
-            
+
             $width = $image->width();
             $height = $image->height();
             $aspectRatio = $height > 0 ? round($width / $height, 3) : 1.5;
 
             $image->scaleDown(width: 2560);
             $optimizedData = $image->toJpeg(90)->toString();
-            $base64Image = base64_encode($optimizedData);
 
-            // 3. Gemini 3.1 Flash Lite Preview를 이용한 AI 분석
             $geminiKey = env('GEMINI_API_KEY');
-            
             if (!$geminiKey) {
                 throw new \Exception("GEMINI_API_KEY가 .env 파일에 설정되지 않았습니다.");
             }
 
-            $prompt = "You are a professional photographer's assistant. [User Input Location]: {$locationHint}. Analyze the provided image and generate metadata.
-                [Guidelines]
-                1. Tone & Style: Write the 'description' in a calm, professional, and artistic documentary style.
-                2. Korean Language Rule: For the 'ko' description, ALWAYS end sentences with formal written style endings such as '~이다.', '~한다.', '~다.' (Do NOT use '~습니다' or '~해요').
-                3. Accuracy: Base the description strictly on the visual elements of the image and the provided location hint.
+            // --- 💡 3. 새로 만든 서비스 클래스를 호출하여 AI 분석 실행 ---
+            // 프롬프트 작성, 리사이징, API 통신 등의 복잡한 과정이 이 한 줄로 끝납니다.
+            $visionService = new GeminiVisionService();
+            $aiData = $visionService->analyzeImage($file, $locationHint, $geminiKey);
 
-                The response MUST be a valid JSON object matching exactly this structure:
-                {
-                    \"title\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
-                    \"location\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
-                    \"description\": {\"ko\": \"\", \"en\": \"\", \"ja\": \"\"},
-                    \"category\": \"Landscape|Cityscape|Portrait\",
-                    \"country\": \"English Country Name\"
-            }";
-
-            $response = Http::timeout(60)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={$geminiKey}", [
-                'contents' => [
-                    ['parts' => [
-                        ['text' => $prompt],
-                        ['inline_data' => ['mime_type' => 'image/jpeg', 'data' => $base64Image]]
-                    ]]
-                ],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
-                ]
-            ]);
-
-            if ($response->failed()) {
-                $errorMsg = $response->json('error.message', '알 수 없는 API 에러 발생');
-                throw new \Exception("Gemini API 오류: " . $errorMsg);
-            }
-
-            $jsonText = $response->json('candidates.0.content.parts.0.text', '{}');
-            $aiData = json_decode(trim($jsonText), true);
-
-            if (!$aiData || !isset($aiData['title'])) {
-                Log::error("Gemini Parse Error. Raw response: " . $jsonText);
-                throw new \Exception("Gemini 응답을 JSON으로 변환할 수 없습니다.");
-            }
-
+            // --- 4. DB 및 S3 저장 (기존과 동일) ---
             // 4. 슬러그(ID) 및 S3 키 생성
             $keyword = Str::slug($aiData['title']['en'] ?? 'photo');
             $slug = "{$takenDate}_{$keyword}_" . Str::random(4);
@@ -143,7 +105,7 @@ class AdminController extends Controller
 
             // 5. S3 업로드 검증
             $uploadSuccess = Storage::disk('s3')->put($s3Key, $optimizedData);
-            
+
             if (!$uploadSuccess) {
                 throw new \Exception("S3 업로드에 실패했습니다. IAM 권한을 확인하세요.");
             }
@@ -170,7 +132,7 @@ class AdminController extends Controller
                 $post = Post::create([
                     'slug'         => $slug,
                     'category'     => $aiData['category'] ?? 'Landscape',
-                    'title'        => json_decode($safeTitle, true), 
+                    'title'        => json_decode($safeTitle, true),
                     'taken_at'     => $takenDate,
                     'location'     => json_decode($safeLocation, true),
                     'country'      => $aiData['country'] ?? 'Unknown',
