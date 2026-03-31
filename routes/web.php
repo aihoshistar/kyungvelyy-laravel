@@ -38,4 +38,7 @@ Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/collage', [AdminCollageController::class, 'index'])->name('admin.collage.index');
     Route::get('/collage/api/posts', [AdminCollageController::class, 'searchPosts']);
     Route::get('/collage/api/posts/{id}/photos', [AdminCollageController::class, 'getPhotos']);
+
+    // 💡 [추가] 프레임 스튜디오 라우트 (컨트롤러 없이 뷰만 렌더링하도록 클로저 사용)
+    Route::get('/frame', function() { return view('admin.frame'); })->name('admin.frame.index');
 });
