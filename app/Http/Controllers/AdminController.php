@@ -6,35 +6,30 @@ use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache; // 💡 Cache 파사드 추가
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
-use App\Services\GeminiVisionService; // 💡 서비스 클래스 Import 추가
+use App\Services\GeminiVisionService; 
 
 class AdminController extends Controller
 {
+    /**
+     * 업로드 페이지 렌더링
+     */
     public function uploadView(Request $request)
     {
-        $password = env('ADMIN_PASSWORD', 'admin1234');
-        if ($request->has('key')) {
-            if ($request->get('key') === $password) {
-                session(['is_admin' => true]);
-                return redirect('/admin/upload');
-            }
-        }
-
-        if (!session('is_admin')) {
-            abort(403, 'Unauthorized access.');
-        }
-
+        // 미들웨어(AdminBasicAuth)에서 이미 인증을 처리하므로 
+        // 기존의 key 파라미터 체크 및 세션(is_admin) 검사 로직을 모두 삭제했습니다.
         return view('admin.upload');
     }
 
+    /**
+     * 사진 업로드 처리 (AJAX)
+     */
     public function processUpload(Request $request)
     {
-        if (!session('is_admin')) return response()->json(['error' => 'Unauthorized'], 403);
-
+        // 미들웨어에서 인증 처리됨
         $request->validate([
             'photo'         => 'required|image|mimes:jpeg,png,jpg|max:51200',
             'location_hint' => 'nullable|string',
@@ -46,7 +41,7 @@ class AdminController extends Controller
             $originalName = $file->getClientOriginalName();
             $locationHint = $request->input('location_hint', '서울특별시 (Seoul, Korea)');
 
-            // 1. EXIF 데이터 추출
+            // --- 1. EXIF 데이터 추출 ---
             $exif = @exif_read_data($file->getRealPath());
             $make = $exif['Make'] ?? 'Unknown';
             $model = $exif['Model'] ?? 'Unknown';
@@ -75,7 +70,7 @@ class AdminController extends Controller
 
             $cameraBrand = stripos($make, 'nikon') !== false ? 'Nikon' : (stripos($make, 'sony') !== false ? 'Sony' : 'Other');
 
-            // --- 2. 원본 이미지 S3 저장용 최적화 (기존과 동일) ---
+            // --- 2. 원본 이미지 S3 저장용 최적화 ---
             $manager = new ImageManager(new Driver());
             $image = $manager->read($file->getRealPath());
 
@@ -91,19 +86,19 @@ class AdminController extends Controller
                 throw new \Exception("GEMINI_API_KEY가 .env 파일에 설정되지 않았습니다.");
             }
 
-            // --- 💡 3. 새로 만든 서비스 클래스를 호출하여 AI 분석 실행 ---
-            // 프롬프트 작성, 리사이징, API 통신 등의 복잡한 과정이 이 한 줄로 끝납니다.
+            // --- 3. 서비스 클래스를 호출하여 AI 분석 실행 ---
+            // 💡 여기서 내부적으로 1024px 사이즈로 줄인 이미지를 API로 전송하므로 
+            // 60초 타임아웃 문제를 예방할 수 있습니다.
             $visionService = new GeminiVisionService();
             $aiData = $visionService->analyzeImage($file, $locationHint, $geminiKey);
 
-            // --- 4. DB 및 S3 저장 (기존과 동일) ---
-            // 4. 슬러그(ID) 및 S3 키 생성
+            // --- 4. 슬러그(ID) 및 S3 키 생성 ---
             $keyword = Str::slug($aiData['title']['en'] ?? 'photo');
             $slug = "{$takenDate}_{$keyword}_" . Str::random(4);
             $s3FileName = "{$slug}.jpg";
             $s3Key = "photo/{$year}/{$month}/{$day}/{$s3FileName}";
 
-            // 5. S3 업로드 검증
+            // --- 5. S3 업로드 검증 ---
             $uploadSuccess = Storage::disk('s3')->put($s3Key, $optimizedData);
 
             if (!$uploadSuccess) {
@@ -113,22 +108,22 @@ class AdminController extends Controller
             $customBaseUrl = env('AWS_URL', 'https://photo.kkyungvelyy.com');
             $finalUrl = rtrim($customBaseUrl, '/') . '/' . ltrim($s3Key, '/');
 
-            // 6. 다국어 데이터를 유니코드 깨짐 없이 명시적으로 JSON 문자열 변환
+            // --- 6. 다국어 데이터를 유니코드 깨짐 없이 명시적으로 JSON 문자열 변환 ---
             $safeTitle = json_encode($aiData['title'], JSON_UNESCAPED_UNICODE);
             $safeLocation = json_encode($aiData['location'] ?? ['ko'=>'','en'=>'','ja'=>''], JSON_UNESCAPED_UNICODE);
             $safeDesc = json_encode($aiData['description'] ?? ['ko'=>'','en'=>'','ja'=>''], JSON_UNESCAPED_UNICODE);
 
-            // 7. DB 저장 (1:N 매핑의 핵심 로직)
+            // --- 7. DB 저장 (1:N 매핑) ---
             $postId = $request->input('post_id');
             $post = null;
 
             if ($postId) {
-                // 프론트엔드에서 앨범 ID를 전달했다면 해당 앨범을 찾습니다.
+                // 프론트엔드에서 기존 앨범 ID를 전달했다면 해당 앨범을 찾습니다.
                 $post = Post::find($postId);
             }
 
             if (!$post) {
-                // 앨범 ID가 없거나 유효하지 않다면(즉 첫 번째 사진이라면) 새로 앨범을 생성합니다.
+                // 앨범 ID가 없거나(즉 첫 번째 사진) 유효하지 않다면 새로 앨범을 생성합니다.
                 $post = Post::create([
                     'slug'         => $slug,
                     'category'     => $aiData['category'] ?? 'Landscape',
@@ -142,7 +137,7 @@ class AdminController extends Controller
                 ]);
             }
 
-            // 사진은 기존 앨범이든 새 앨범이든 $post->id 를 부모로 삼아 무조건 생성합니다. (1:N 완성)
+            // 사진은 기존 앨범이든 새 앨범이든 $post->id 를 부모로 삼아 생성합니다.
             Photo::create([
                 'post_id'                  => $post->id,
                 'title'                    => json_decode($safeTitle, true),
@@ -158,7 +153,7 @@ class AdminController extends Controller
                 'exif_iso'                 => $iso,
             ]);
 
-            // 💡 [핵심] 업로드가 완료되면 프론트엔드 캐시를 지워서 다음 접속자가 최신 사진을 보게 만듭니다.
+            // 💡 업로드가 완료되면 프론트엔드 캐시를 지워서 다음 접속자가 최신 사진을 즉시 볼 수 있게 합니다.
             Cache::forget('portfolio_posts');
 
             return response()->json([
