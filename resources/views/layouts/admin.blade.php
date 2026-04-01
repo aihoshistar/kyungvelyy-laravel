@@ -28,6 +28,7 @@
                 <a href="/admin/manage" class="text-sm font-medium transition {{ request()->is('admin/manage') ? 'text-white font-bold' : 'text-gray-500 hover:text-white' }}">메타데이터 관리</a>
                 <a href="/admin/collage" class="text-sm font-medium transition {{ request()->is('admin/collage') ? 'text-white font-bold' : 'text-gray-500 hover:text-white' }}">콜라주 스튜디오</a>
                 <a href="/admin/frame" class="text-sm font-medium transition {{ request()->is('admin/frame') ? 'text-white font-bold' : 'text-gray-500 hover:text-white' }}">프레임 스튜디오</a>
+                <a href="/admin/picture-control" class="text-sm font-medium transition {{ request()->is('admin/picture-control') ? 'text-white font-bold' : 'text-gray-500 hover:text-white' }}">픽처 컨트롤</a>
                 <a href="/admin/logs/monitoring-dashboard" class="text-sm font-medium transition {{ request()->is('admin/logs/monitoring-dashboard') ? 'text-white font-bold' : 'text-gray-500 hover:text-white' }}">시스템 모니터링</a>
             </div>
         </div>
