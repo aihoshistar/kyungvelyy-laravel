@@ -53,6 +53,11 @@
     }
     </script>
 
+    <!-- ========================================== -->
+    <!-- 📡 5. RSS 피드 자동 발견(Auto-discovery) -->
+    <!-- ========================================== -->
+    <link rel="alternate" type="application/rss+xml" title="KKYOUNG.PHOTO RSS Feed" href="{{ url('/rss') }}" />
+
     <!-- 테마 설정 스크립트 -->
     <script>
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

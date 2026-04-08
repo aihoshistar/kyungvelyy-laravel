@@ -8,6 +8,9 @@ use App\Http\Controllers\AdminManageController;
 use App\Http\Controllers\AdminCollageController;
 use App\Http\Controllers\AdminController;
 
+Route::get('/sitemap.xml', [App\Http\Controllers\PostController::class, 'sitemap']);
+Route::get('/rss', [App\Http\Controllers\PostController::class, 'rss']);
+
 Route::get('/', function () {
     return redirect('/ko');
 });

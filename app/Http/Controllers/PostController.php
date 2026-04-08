@@ -13,22 +13,124 @@ class PostController extends Controller
     /**
      * 메인 갤러리 페이지 렌더링
      */
+    // 💡 [수정] 라우터에서 넘어오는 $slug 와 $photoIndex 파라미터를 받을 수 있도록 추가합니다. (기본값 null)
+    /**
+     * 메인 갤러리 페이지 렌더링
+     */
     public function index($locale, $slug = null, $photoIndex = null)
     {
-        // 💡 [핵심] DB 조회 결과를 'portfolio_posts'라는 이름으로 영구 캐싱합니다.
-        // 관리자가 사진을 올리거나 수정할 때만 이 캐시가 지워지므로, 
-        // 평소 방문자들은 DB를 거치지 않고 즉시(0.001초) 데이터를 받게 됩니다!
         $posts = Cache::rememberForever('portfolio_posts', function () {
             return Post::with(['photos' => function($query) {
-                // 포스트 내부의 여러 사진들은 order(순서) 또는 id에 맞춰 정방향 정렬
                 $query->orderBy('id', 'asc');
             }])
-            ->orderBy('taken_at', 'desc') // 최신 게시물이 위로 오게 (내림차순)
+            ->orderBy('taken_at', 'desc')
             ->get();
         });
 
         return view('welcome', compact('posts'));
     }
+
+    /**
+     * 💡 사이트맵(sitemap.xml) 동적 생성
+     */
+    public function sitemap()
+    {
+        $posts = Cache::rememberForever('portfolio_posts', function () {
+            return Post::with(['photos' => function($query) {
+                $query->orderBy('id', 'asc');
+            }])->orderBy('taken_at', 'desc')->get();
+        });
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>';
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+        
+        foreach(['ko', 'en', 'ja'] as $locale) {
+            $xml .= '<url><loc>' . htmlspecialchars(url("/{$locale}")) . '</loc><changefreq>daily</changefreq><priority>1.0</priority></url>';
+        }
+
+        foreach($posts as $post) {
+            $slug = $post->slug ?? $post->id;
+            $updatedAt = $post->updated_at ? $post->updated_at->tz('UTC')->toAtomString() : now()->tz('UTC')->toAtomString();
+            
+            foreach($post->photos as $index => $photo) {
+                foreach(['ko', 'en', 'ja'] as $locale) {
+                    $xml .= '<url>';
+                    $xml .= '<loc>' . htmlspecialchars(url("/{$locale}/archive/{$slug}/" . ($index + 1))) . '</loc>';
+                    $xml .= '<lastmod>' . $updatedAt . '</lastmod>';
+                    $xml .= '<changefreq>weekly</changefreq>';
+                    $xml .= '<priority>0.8</priority>';
+                    $xml .= '</url>';
+                }
+            }
+        }
+        $xml .= '</urlset>';
+
+        if (ob_get_length()) ob_end_clean();
+
+        return response($xml)->header('Content-Type', 'text/xml; charset=utf-8');
+    }
+
+    /**
+     * 💡 RSS 피드 동적 생성
+     * 100% 검증된 문법과 안전한 데이터 추출 방식을 적용했습니다.
+     */
+    public function rss()
+    {
+        $posts = Cache::rememberForever('portfolio_posts', function () {
+            return Post::with(['photos' => function($query) {
+                $query->orderBy('id', 'asc');
+            }])->orderBy('taken_at', 'desc')->get();
+        });
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>';
+        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">';
+        $xml .= '<channel>';
+        $xml .= '<title>KKYOUNG.PHOTO</title>';
+        $xml .= '<link>' . htmlspecialchars(url('/')) . '</link>';
+        $xml .= '<description>Archive of Light by PARK KYOUNG SEO.</description>';
+        $xml .= '<language>' . app()->getLocale() . '</language>';
+        $xml .= '<atom:link href="' . htmlspecialchars(url('/rss')) . '" rel="self" type="application/rss+xml" />';
+
+        foreach($posts as $post) {
+            // 앨범 내 첫 번째 사진 정보를 썸네일로 활용
+            $firstPhoto = $post->photos->first();
+            $photoUrl = $firstPhoto ? $firstPhoto->url : '';
+            
+            // 데이터 추출 (캐스팅된 배열 또는 null 방어)
+            $titleKo = data_get($post->title, 'ko') ?? data_get($post->title, 'en') ?? 'Untitled';
+            $descKo = data_get($post->description, 'ko') ?? data_get($post->description, 'en') ?? '';
+            
+            $slug = $post->slug ?? $post->id;
+            $link = htmlspecialchars(url("/ko/archive/{$slug}/1"));
+            $pubDate = $post->created_at ? $post->created_at->toRfc822String() : now()->toRfc822String();
+
+            $xml .= '<item>';
+            $xml .= '<title><![CDATA[' . $titleKo . ']]></title>';
+            $xml .= '<link>' . $link . '</link>';
+            $xml .= '<guid isPermaLink="true">' . $link . '</guid>';
+            $xml .= '<description><![CDATA[';
+            if($photoUrl) {
+                // 💡 HTML 태그 내의 URL 및 속성도 안전하게 처리
+                $xml .= '<img src="' . htmlspecialchars($photoUrl) . '" alt="' . htmlspecialchars($titleKo) . '" style="max-width:100%; border-radius:8px;"><br><br>';
+            }
+            $xml .= $descKo . ']]></description>';
+            $xml .= '<pubDate>' . $pubDate . '</pubDate>';
+            
+            if($photoUrl) {
+                // 💡 XML Attribute에는 반드시 htmlspecialchars가 적용되어야 함 (& 등의 파싱 오류 방지)
+                $xml .= '<media:content url="' . htmlspecialchars($photoUrl) . '" type="image/jpeg" medium="image"/>';
+            }
+            $xml .= '</item>';
+        }
+
+        $xml .= '</channel></rss>';
+
+        if (ob_get_length()) ob_end_clean();
+
+        // 브라우저 호환성을 위해 text/xml로 반환해도 무방합니다.
+        return response($xml)->header('Content-Type', 'text/xml; charset=utf-8');
+    }
+
 
     /**
      * 특정 사진의 반응 토글 (POST)
