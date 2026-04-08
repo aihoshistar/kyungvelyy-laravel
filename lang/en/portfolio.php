@@ -3,7 +3,8 @@
 return [
     // --- SEO Meta Tags ---
     'meta_title' => 'PARK KYOUNG SEO',
-    'meta_desc'  => 'Architecting structures, recording balance. The geometry of the world captured through a Blockchain Infra Engineer\'s perspective. KKYOUNG.PHOTO photography portfolio.',    'meta_desc' => 'Architecting structures, recording balance. The geometry of the world captured through a developer\'s perspective. KKYOUNG.PHOTO photography portfolio.',
+    // 💡 중복된 meta_desc 삭제 및 하나로 통합
+    'meta_desc'  => 'Architecting structures, recording balance. The geometry of the world captured through a Blockchain Infra Engineer\'s perspective. KKYOUNG.PHOTO photography portfolio.',
 
     // --- Navigation & Header ---
     'navGallery' => 'Gallery',
@@ -27,6 +28,9 @@ return [
     'catCityscape' => 'Cityscape',
     'filterAllYears' => 'All Years',
     'filterAllCountries' => 'All Countries',
+    // 💡 누락된 렌즈/카메라 필터 추가
+    'filterAllCameras' => 'All Cameras',
+    'filterAllLenses'  => 'All Lenses',
 
     // --- Photo Details & EXIF ---
     'exifCamera' => 'Camera',
@@ -44,4 +48,13 @@ return [
     'projectAtmosDesc' => '(A precision weather and lighting computational tool for photographers)',
     'projectNdCalcDesc' => '(Smart ND Filter Exposure Calculator for Long Exposure Photographers)',
 
+    // --- Footer Section (신규 추가됨) ---
+    'footerDesc'          => 'Unrecorded moments are akin to oblivion.<br>This is the archive of Park Kyoung Seo,<br>who documents the order of the world through light and balance.',
+    'footerCopyrightTitle' => 'Copyright & Licensing',
+    'footerCopyrightText' => 'Unless otherwise stated, all images and content on this website are copyrighted by Park Kyoung Seo (@kkyoung.photo).',
+    'footerLicense1'      => 'All photographs are protected by copyright law; unauthorized reproduction, copying, or distribution is prohibited.',
+    'footerLicense2'      => 'If using images for non-commercial personal purposes, you must clearly credit the source and the artist.',
+    'footerLicense3'      => 'For commercial use or to purchase original licenses, please contact me directly.',
+    'footerFollowTitle'   => 'Follow',
+    'footerTechTitle'     => 'Architected with',
 ];

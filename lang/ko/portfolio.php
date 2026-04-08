@@ -27,6 +27,9 @@ return [
     'catCityscape' => '도시',
     'filterAllYears' => '모든 연도',
     'filterAllCountries' => '모든 국가',
+    // 💡 누락되었던 렌즈/카메라 필터 추가
+    'filterAllCameras' => '모든 기종',
+    'filterAllLenses'  => '모든 렌즈',
 
     // --- Photo Details & EXIF ---
     'exifCamera' => '카메라',
@@ -43,4 +46,14 @@ return [
     'projectsTitle'    => 'Projects & Websites',
     'projectAtmosDesc' => '(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)',
     'projectNdCalcDesc' => '(장노출 사진작가를 위한 스마트 ND 필터 노출 계산기)',
+
+    // --- Footer Section (신규 추가됨) ---
+    'footerDesc'          => '기록되지 않은 찰나는 망각에 가깝습니다.<br>빛과 균형을 통해 세상의 질서를 기록하는<br>Park Kyoung Seo의 아카이브입니다.',
+    'footerCopyrightTitle' => 'Copyright & Licensing',
+    'footerCopyrightText' => '따로 명시되지 않은 한, 본 웹사이트의 모든 이미지와 콘텐츠의 저작권은 박경서(@kkyoung.photo)에게 있습니다.',
+    'footerLicense1'      => '모든 사진은 저작권법의 보호를 받으며 무단 전재, 복사, 배포를 금합니다.',
+    'footerLicense2'      => '비영리 개인 용도로 이미지를 활용할 경우 반드시 출처와 작가 정보를 명기해야 합니다.',
+    'footerLicense3'      => '상업적 활용 또는 원본 라이선스 구매가 필요하신 경우 별도로 문의해 주시기 바랍니다.',
+    'footerFollowTitle'   => 'Follow',
+    'footerTechTitle'     => 'Architected with',
 ];

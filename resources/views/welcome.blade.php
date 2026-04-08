@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
+    <!-- ========================================== -->
+    <!-- 🚀 1. 다국어 및 딥링크 SEO 메타 태그 (수정됨) -->
+    <!-- ========================================== -->
     @php
         $currentLocale = app()->getLocale();
-        // 1. 번역 파일에서 기본 메타 정보 로드
         $baseTitle = __('portfolio.meta_title') ?? 'PARK KYOUNG SEO';
         $baseDesc = __('portfolio.meta_desc') ?? 'Architecting structures, recording balance.';
 
-        // 2. 딥링크(SEO) 데이터 여부에 따른 동적 값 설정
         if (isset($seoPost)) {
-            // 포스트 상세 페이지 공유 시
             $postTitle = data_get($seoPost->title, $currentLocale) ?? data_get($seoPost->title, 'en') ?? 'Untitled';
             $metaTitle = "{$postTitle} | {$baseTitle}";
             
@@ -21,16 +21,12 @@
             $metaDesc = ($firstPhoto ? data_get($firstPhoto->description, $currentLocale) : null) ?? $baseDesc;
             $metaImage = $firstPhoto ? $firstPhoto->url : "https://photo.kkyungvelyy.com/photo/profile.jpg";
         } else {
-            // 메인 페이지 접속 시
             $metaTitle = "KKYOUNG.PHOTO | {$baseTitle}";
             $metaDesc = $baseDesc;
             $metaImage = "https://photo.kkyungvelyy.com/photo/profile.jpg";
         }
     @endphp
 
-    <!-- ========================================== -->
-    <!-- 🚀 1. 기본 SEO 메타 태그 -->
-    <!-- ========================================== -->
     <title>{{ $metaTitle }}</title>
     <meta name="description" content="{{ $metaDesc }}">
     <meta name="keywords" content="사진작가, 포트폴리오, 박경서, KKYOUNG, 블록체인 개발자, 풍경사진, 도시사진, Photographer, Developer, 서울">
@@ -125,11 +121,11 @@
             <div class="flex items-center space-x-6 md:space-x-8 text-sm font-medium">
                 <a href="#gallery" class="theme-text-muted hover:text-opacity-80 transition-colors hidden sm:block" data-i18n="navGallery">{{ __('portfolio.navGallery') }}</a>
                 <div class="flex space-x-3 text-xs theme-text-muted theme-surface px-3 py-1.5 rounded-full border theme-border shadow-sm">
-                    <a href="/ko" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'ko' ? 'theme-text font-bold' : '' }}">KO</a>
+                    <a href="/ko" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'ko' ? 'theme-text font-bold' : '' }}" data-lang="ko">KO</a>
                     <span class="opacity-30">·</span>
-                    <a href="/en" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'en' ? 'theme-text font-bold' : '' }}">EN</a>
+                    <a href="/en" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'en' ? 'theme-text font-bold' : '' }}" data-lang="en">EN</a>
                     <span class="opacity-30">·</span>
-                    <a href="/ja" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'ja' ? 'theme-text font-bold' : '' }}">JA</a>
+                    <a href="/ja" class="lang-btn hover:text-current transition-colors {{ app()->getLocale() == 'ja' ? 'theme-text font-bold' : '' }}" data-lang="ja">JA</a>
                 </div>
                 <button id="theme-toggle" class="p-2 rounded-full theme-btn-hover theme-text transition-colors duration-300" aria-label="Toggle Dark Mode">
                     <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -142,6 +138,7 @@
     <main class="max-w-7xl mx-auto px-6 pt-32 pb-24 relative min-h-screen">
         <!-- Profile Header -->
         <header class="mb-32 reveal" id="profile-header">
+            <!-- 상단 섹션: 대형 이미지와 이름/캐치프레이즈 -->
             <div class="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center lg:items-end mb-24">
                 <div class="relative shrink-0 group">
                     <div class="absolute -inset-4 bg-gradient-to-tr from-gray-200 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-[2.5rem] -z-10 opacity-50 blur-2xl group-hover:opacity-100 transition duration-700"></div>
@@ -174,11 +171,11 @@
             <!-- 하단 섹션: 메타정보 및 외부 링크 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pt-16 border-t theme-border">
                 <div class="space-y-3">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="expertise">{{ __('portfolio.expertise') }}</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="expertise">Expertise</span>
                     <span class="text-lg font-medium theme-text">Blockchain Infra</span>
                 </div>
                 <div class="space-y-3">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="basedIn">{{ __('portfolio.basedIn') }}</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="basedIn">Based in</span>
                     <span class="text-lg font-medium theme-text">Seoul, Korea</span>
                 </div>
                 <div class="space-y-4">
@@ -196,14 +193,14 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="projectsTitle">{{ __('portfolio.projectsTitle') }}</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="projectsTitle">{{ __('portfolio.projectsTitle') ?? 'Projects & Websites' }}</span>
                     <ul class="space-y-4">
                         <li>
                             <a href="https://ai-agent-photo-sky.vercel.app" target="_blank" rel="noopener noreferrer" class="group flex items-start gap-3 text-sm font-medium hover:theme-text transition-all w-fit theme-text-muted">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-60 group-hover:opacity-100 transition-all duration-300 mt-2 shrink-0"></span>
                                 <span class="leading-relaxed">
                                     <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">Atmos</span>
-                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectAtmosDesc">{{ __('portfolio.projectAtmosDesc') }}</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectAtmosDesc">{{ __('portfolio.projectAtmosDesc') ?? '(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)' }}</span>
                                 </span>
                                 <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -213,7 +210,7 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-60 group-hover:opacity-100 transition-all duration-300 mt-2 shrink-0"></span>
                                 <span class="leading-relaxed">
                                     <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">ND PRO Calc</span>
-                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectNdCalcDesc">{{ __('portfolio.projectNdCalcDesc') }}</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectNdCalcDesc">{{ __('portfolio.projectNdCalcDesc') ?? '(장노출 사진작가를 위한 스마트 ND 필터 노출 계산기)' }}</span>
                                 </span>
                                 <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -224,7 +221,7 @@
         </header>
 
         <!-- Gallery Section -->
-        <div id="gallery" class="reveal">
+        <div id="gallery" class="scroll-mt-24 reveal">
             <!-- Gallery & Advanced Controls -->
             <div id="gallery-controls" class="flex flex-col mb-10 space-y-5">
                 <div class="flex flex-col xl:flex-row xl:items-end justify-between space-y-4 xl:space-y-0">
@@ -233,11 +230,13 @@
                             <h3 class="text-xs uppercase tracking-[0.2em] theme-text-muted font-semibold mb-2">Selected Works</h3>
                             <h2 class="text-3xl font-bold theme-text tracking-tight transition-colors" id="section-title" data-i18n="galleryTitle">{{ __('portfolio.galleryTitle') }}</h2>
                         </div>
-                        <div class="bg-surface border theme-border rounded-full p-1 flex shadow-inner shrink-0 relative">
-                            <button id="btn-grid-view" aria-label="Grid View" class="p-2 rounded-full transition-all view-toggle-active relative z-10" onclick="window.Portfolio.switchView('grid')">
+                        
+                        <!-- 💡 [수정됨] 뷰 모드 토글 버튼 레이아웃 개선 -->
+                        <div class="bg-surface border theme-border rounded-full p-1 flex items-center shadow-inner shrink-0 relative mt-4">
+                            <button id="btn-grid-view" aria-label="Grid View" class="w-10 h-10 flex items-center justify-center rounded-full transition-all view-toggle-active relative z-10 shrink-0" onclick="window.Portfolio.switchView('grid')">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                             </button>
-                            <button id="btn-map-view" aria-label="Map View" class="p-2 rounded-full transition-all view-toggle-inactive relative z-10" onclick="window.Portfolio.switchView('map')">
+                            <button id="btn-map-view" aria-label="Map View" class="w-10 h-10 flex items-center justify-center rounded-full transition-all view-toggle-inactive relative z-10 shrink-0" onclick="window.Portfolio.switchView('map')">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                             </button>
                         </div>
@@ -254,7 +253,7 @@
                             <div class="flex space-x-2 shrink-0 pr-4 xl:pr-0">
                                 <div class="relative shrink-0">
                                     <select id="year-filter" aria-label="Filter by Year" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
-                                        <option value="all" data-i18n="filterAllYears">{{ __('portfolio.filterAllYears') }}</option>
+                                        <option value="all" data-i18n="filterAllYears">모든 연도</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -262,7 +261,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="country-filter" aria-label="Filter by Country" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
-                                        <option value="all" data-i18n="filterAllCountries">{{ __('portfolio.filterAllCountries') }}</option>
+                                        <option value="all" data-i18n="filterAllCountries">모든 국가</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -270,7 +269,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="camera-filter" aria-label="Filter by Camera" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[140px] truncate">
-                                        <option value="all" data-i18n="filterAllCameras">{{ __('portfolio.exifCamera') }}</option>
+                                        <option value="all" data-i18n="filterAllCameras">모든 기종</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -278,7 +277,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="lens-filter" aria-label="Filter by Lens" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[160px] truncate">
-                                        <option value="all" data-i18n="filterAllLenses">{{ __('portfolio.exifLens') }}</option>
+                                        <option value="all" data-i18n="filterAllLenses">모든 렌즈</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -296,11 +295,14 @@
                 <div id="grid-container" class="view-transition columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 opacity-100 relative z-10"></div>
                 <div id="map-container" class="view-transition hidden w-full h-[75vh] rounded-3xl overflow-hidden shadow-2xl opacity-0 border theme-border relative z-0 bg-[#e5e3df] dark:bg-[#242f3e]">
                     <div id="map-canvas" class="w-full h-full"></div>
+                    
                     <div id="map-loader" class="absolute inset-0 bg-black/50 backdrop-blur flex items-center justify-center text-white hidden z-10">
                         <div class="flex flex-col items-center">
-                            <span class="text-sm font-bold tracking-[0.3em] uppercase animate-pulse" data-i18n="loadingMap">{{ __('portfolio.loadingMap') }}</span>
+                            <svg class="animate-spin h-8 w-8 mb-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span class="text-xs font-bold tracking-[0.3em] uppercase" data-i18n="loadingMap">{{ __('portfolio.loadingMap') }}</span>
                         </div>
                     </div>
+                    
                 </div>
             </div>
         </div>
@@ -313,10 +315,10 @@
                 <!-- Brand & Copyright -->
                 <div class="lg:col-span-1">
                     <a href="#" class="theme-text font-bold tracking-widest text-sm uppercase block mb-6">KKYOUNG.PHOTO</a>
-                    <p class="theme-text-muted text-sm leading-loose mb-8">
-                        기록되지 않은 찰나는 망각에 가깝습니다.<br>
-                        빛과 균형을 통해 세상의 질서를 기록하는<br>
-                        Park Kyoung Seo의 아카이브입니다.
+                    
+                    <!-- 💡 다국어 속성 적용 -->
+                    <p class="theme-text-muted text-sm leading-loose mb-8" data-i18n="footerDesc">
+                        {!! __('portfolio.footerDesc') ?? '기록되지 않은 찰나는 망각에 가깝습니다.<br>빛과 균형을 통해 세상의 질서를 기록하는<br>Park Kyoung Seo의 아카이브입니다.' !!}
                     </p>
                     <div class="text-[10px] font-bold tracking-widest theme-text-muted uppercase opacity-40">
                         &copy; 2026 Park Kyoung Seo. All Rights Reserved.
@@ -325,15 +327,15 @@
 
                 <!-- Terms & Licensing -->
                 <div class="lg:col-span-2">
-                    <h4 class="text-xs font-bold theme-text uppercase tracking-[0.2em] mb-6">Copyright & Licensing</h4>
+                    <h4 class="text-xs font-bold theme-text uppercase tracking-[0.2em] mb-6" data-i18n="footerCopyrightTitle">{{ __('portfolio.footerCopyrightTitle') ?? 'Copyright & Licensing' }}</h4>
                     <div class="space-y-4">
-                        <p class="theme-text-muted text-sm leading-relaxed max-w-xl">
-                            따로 명시되지 않은 한, 본 웹사이트의 모든 이미지와 콘텐츠의 저작권은 박경서(@kkyoung.photo)에게 있습니다.
+                        <p class="theme-text-muted text-sm leading-relaxed max-w-xl" data-i18n="footerCopyrightText">
+                            {{ __('portfolio.footerCopyrightText') ?? '따로 명시되지 않은 한, 본 웹사이트의 모든 이미지와 콘텐츠의 저작권은 박경서(@kkyoung.photo)에게 있습니다.' }}
                         </p>
                         <ul class="text-xs theme-text-muted space-y-2 opacity-80 list-disc pl-4">
-                            <li>모든 사진은 저작권법의 보호를 받으며 무단 전재, 복사, 배포를 금합니다.</li>
-                            <li>비영리 개인 용도로 이미지를 활용할 경우 반드시 출처와 작가 정보를 명기해야 합니다.</li>
-                            <li>상업적 활용 또는 원본 라이선스 구매가 필요하신 경우 별도로 문의해 주시기 바랍니다.</li>
+                            <li data-i18n="footerLicense1">{{ __('portfolio.footerLicense1') ?? '모든 사진은 저작권법의 보호를 받으며 무단 전재, 복사, 배포를 금합니다.' }}</li>
+                            <li data-i18n="footerLicense2">{{ __('portfolio.footerLicense2') ?? '비영리 개인 용도로 이미지를 활용할 경우 반드시 출처와 작가 정보를 명기해야 합니다.' }}</li>
+                            <li data-i18n="footerLicense3">{{ __('portfolio.footerLicense3') ?? '상업적 활용 또는 원본 라이선스 구매가 필요하신 경우 별도로 문의해 주시기 바랍니다.' }}</li>
                         </ul>
                     </div>
                 </div>
@@ -341,7 +343,7 @@
                 <!-- Connect & Tech Stack -->
                 <div class="lg:col-span-1 flex flex-col justify-between">
                     <div>
-                        <h4 class="text-xs font-bold theme-text uppercase tracking-[0.2em] mb-6">Follow</h4>
+                        <h4 class="text-xs font-bold theme-text uppercase tracking-[0.2em] mb-6" data-i18n="footerFollowTitle">{{ __('portfolio.footerFollowTitle') ?? 'Follow' }}</h4>
                         <div class="flex gap-4">
                             <a href="https://www.instagram.com/kkyoung.photo" class="theme-text-muted hover:theme-text transition-all transform hover:scale-110" aria-label="Instagram">
                                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
@@ -352,7 +354,7 @@
                         </div>
                     </div>
                     <div class="mt-8">
-                        <div class="text-[10px] font-bold tracking-[0.2em] theme-text-muted uppercase opacity-40 mb-3">Architected with</div>
+                        <div class="text-[10px] font-bold tracking-[0.2em] theme-text-muted uppercase opacity-40 mb-3" data-i18n="footerTechTitle">{{ __('portfolio.footerTechTitle') ?? 'Architected with' }}</div>
                         <div class="flex items-center gap-4 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
                             <span class="text-xs font-semibold theme-text">Laravel</span>
                             <span class="text-xs font-semibold theme-text">Vite</span>
@@ -388,6 +390,7 @@
                 <button onclick="window.Portfolio.nextPhoto()" class="nav-btn absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full theme-text hidden md:flex z-[70] items-center justify-center transition-all shadow-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
+                
                 <div id="modal-slider-content" class="w-full min-h-full md:h-full flex flex-col md:flex-row items-stretch"></div>
             </div>
             

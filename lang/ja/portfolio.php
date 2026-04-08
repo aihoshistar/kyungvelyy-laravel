@@ -27,6 +27,9 @@ return [
     'catCityscape' => '都市',
     'filterAllYears' => 'すべての年',
     'filterAllCountries' => 'すべての国',
+    // 💡 누락되었던 렌즈/카메라 필터 추가
+    'filterAllCameras' => 'すべてのカメラ',
+    'filterAllLenses'  => 'すべてのレンズ',
 
     // --- Photo Details & EXIF ---
     'exifCamera' => 'カメラ',
@@ -43,4 +46,14 @@ return [
     'projectsTitle'    => 'プロジェクト & ウェブサイト',
     'projectAtmosDesc' => '(フォトグラファーのための精密気象・採光コンピューテーショナルツール)',
     'projectNdCalcDesc' => '(長時間露光写真家のためのスマートNDフィルター露出計算機)',
+
+    // --- Footer Section (신규 추가됨) ---
+    'footerDesc'          => '記録されていない瞬間は忘却に似ています。<br>光と均衡を通して世界の秩序を記録する<br>Park Kyoung Seoのアーカイブです。',
+    'footerCopyrightTitle' => '著作権およびライセンス',
+    'footerCopyrightText' => '特に明記されていない限り、本ウェブサイトのすべての画像およびコンテンツの著作権はPark Kyoung Seo (@kkyoung.photo) に帰属します。',
+    'footerLicense1'      => 'すべての写真は著作権法によって保護されており、無断転載、複製、配布を禁じます。',
+    'footerLicense2'      => '非営利の個人的な目的で画像を使用する場合は、必ず出典と作家情報を明記してください。',
+    'footerLicense3'      => '商業目的での利用やオリジナルライセンスの購入が必要な場合は、別途お問い合わせください。',
+    'footerFollowTitle'   => 'フォロー',
+    'footerTechTitle'     => '使用技術',
 ];
