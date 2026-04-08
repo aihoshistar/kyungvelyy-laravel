@@ -5,11 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
+    @php
+        $currentLocale = app()->getLocale();
+        // 1. 번역 파일에서 기본 메타 정보 로드
+        $baseTitle = __('portfolio.meta_title') ?? 'PARK KYOUNG SEO';
+        $baseDesc = __('portfolio.meta_desc') ?? 'Architecting structures, recording balance.';
+
+        // 2. 딥링크(SEO) 데이터 여부에 따른 동적 값 설정
+        if (isset($seoPost)) {
+            // 포스트 상세 페이지 공유 시
+            $postTitle = data_get($seoPost->title, $currentLocale) ?? data_get($seoPost->title, 'en') ?? 'Untitled';
+            $metaTitle = "{$postTitle} | {$baseTitle}";
+            
+            $firstPhoto = $seoPost->photos->first();
+            $metaDesc = ($firstPhoto ? data_get($firstPhoto->description, $currentLocale) : null) ?? $baseDesc;
+            $metaImage = $firstPhoto ? $firstPhoto->url : "https://photo.kkyungvelyy.com/photo/profile.jpg";
+        } else {
+            // 메인 페이지 접속 시
+            $metaTitle = "KKYOUNG.PHOTO | {$baseTitle}";
+            $metaDesc = $baseDesc;
+            $metaImage = "https://photo.kkyungvelyy.com/photo/profile.jpg";
+        }
+    @endphp
+
     <!-- ========================================== -->
     <!-- 🚀 1. 기본 SEO 메타 태그 -->
     <!-- ========================================== -->
-    <title>KKYOUNG.PHOTO | {{ __('portfolio.meta_title') ?? 'PARK KYOUNG SEO' }}</title>
-    <meta name="description" content="{{ trans()->has('portfolio.meta_desc') ? __('portfolio.meta_desc') : '구조를 설계하고, 균형을 기록합니다. 개발자의 시선으로 담아낸 세상의 기하학. KKYOUNG.PHOTO 사진 포트폴리오.' }}">
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDesc }}">
     <meta name="keywords" content="사진작가, 포트폴리오, 박경서, KKYOUNG, 블록체인 개발자, 풍경사진, 도시사진, Photographer, Developer, 서울">
     <meta name="author" content="PARK KYOUNG SEO">
     <meta name="robots" content="index, follow">
@@ -17,7 +40,7 @@
     <!-- ========================================== -->
     <!-- 🌍 2. 다국어 SEO 최적화 (hreflang) -->
     <!-- ========================================== -->
-    <link rel="canonical" href="{{ url('/' . app()->getLocale()) }}">
+    <link rel="canonical" href="{{ url('/' . $currentLocale) }}">
     <link rel="alternate" hreflang="ko" href="{{ url('/ko') }}">
     <link rel="alternate" hreflang="en" href="{{ url('/en') }}">
     <link rel="alternate" hreflang="ja" href="{{ url('/ja') }}">
@@ -27,13 +50,16 @@
     <!-- 🔗 3. Open Graph & Twitter -->
     <!-- ========================================== -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ url('/' . app()->getLocale()) }}">
-    <meta property="og:title" content="KKYOUNG.PHOTO | Archive of Light">
-    <meta property="og:description" content="{{ trans()->has('portfolio.meta_desc') ? __('portfolio.meta_desc') : '개발자의 시선으로 담아낸 세상의 기하학.' }}">
-    <meta property="og:image" content="https://photo.kkyungvelyy.com/photo/profile.jpg">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDesc }}">
+    <meta property="og:image" content="{{ $metaImage }}">
     <meta property="og:site_name" content="KKYOUNG.PHOTO">
+    
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://photo.kkyungvelyy.com/photo/profile.jpg">
+    <meta name="twitter:title" content="{{ $metaTitle }}">
+    <meta name="twitter:description" content="{{ $metaDesc }}">
+    <meta name="twitter:image" content="{{ $metaImage }}">
 
     <!-- ========================================== -->
     <!-- 🤖 4. 구글 구조화된 데이터 (JSON-LD) -->
@@ -56,7 +82,7 @@
     <!-- ========================================== -->
     <!-- 📡 5. RSS 피드 자동 발견(Auto-discovery) -->
     <!-- ========================================== -->
-    <link rel="alternate" type="application/rss+xml" title="KKYOUNG.PHOTO RSS ({{ strtoupper(app()->getLocale()) }})" href="{{ url(app()->getLocale() . '/rss') }}" />
+    <link rel="alternate" type="application/rss+xml" title="KKYOUNG.PHOTO RSS ({{ strtoupper($currentLocale) }})" href="{{ url($currentLocale . '/rss') }}" />
 
     <!-- 테마 설정 스크립트 -->
     <script>
@@ -116,7 +142,6 @@
     <main class="max-w-7xl mx-auto px-6 pt-32 pb-24 relative min-h-screen">
         <!-- Profile Header -->
         <header class="mb-32 reveal" id="profile-header">
-            <!-- 상단 섹션: 대형 이미지와 이름/캐치프레이즈 -->
             <div class="flex flex-col lg:flex-row gap-16 lg:gap-24 items-center lg:items-end mb-24">
                 <div class="relative shrink-0 group">
                     <div class="absolute -inset-4 bg-gradient-to-tr from-gray-200 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-[2.5rem] -z-10 opacity-50 blur-2xl group-hover:opacity-100 transition duration-700"></div>
@@ -142,19 +167,18 @@
                     </div>
                     <div class="space-y-6 text-lg md:text-xl leading-relaxed theme-text-muted font-light lg:border-l theme-border lg:pl-12">
                         <p data-i18n="heroBioText3">{{ __('portfolio.heroBioText3') }}</p>
-                        <!-- <p class="italic theme-text font-medium opacity-80 pt-4">"The intersection of code and light is where I record the world."</p> -->
                     </div>
                 </div>
             </div>
 
-            <!-- 하단 섹션: 메타정보 및 외부 링크 (4단 풀-위드 그리드) -->
+            <!-- 하단 섹션: 메타정보 및 외부 링크 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pt-16 border-t theme-border">
                 <div class="space-y-3">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="expertise">Expertise</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="expertise">{{ __('portfolio.expertise') }}</span>
                     <span class="text-lg font-medium theme-text">Blockchain Infra</span>
                 </div>
                 <div class="space-y-3">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="basedIn">Based in</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="basedIn">{{ __('portfolio.basedIn') }}</span>
                     <span class="text-lg font-medium theme-text">Seoul, Korea</span>
                 </div>
                 <div class="space-y-4">
@@ -171,16 +195,15 @@
                     </div>
                 </div>
                 
-                <!-- 💡 다국어 속성 적용 (Header) -->
                 <div class="space-y-4">
-                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="projectsTitle">{{ __('portfolio.projectsTitle') ?? 'Projects & Websites' }}</span>
+                    <span class="block text-xs md:text-sm font-bold theme-text uppercase tracking-widest opacity-50" data-i18n="projectsTitle">{{ __('portfolio.projectsTitle') }}</span>
                     <ul class="space-y-4">
                         <li>
                             <a href="https://ai-agent-photo-sky.vercel.app" target="_blank" rel="noopener noreferrer" class="group flex items-start gap-3 text-sm font-medium hover:theme-text transition-all w-fit theme-text-muted">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-60 group-hover:opacity-100 transition-all duration-300 mt-2 shrink-0"></span>
                                 <span class="leading-relaxed">
                                     <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">Atmos</span>
-                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectAtmosDesc">{{ __('portfolio.projectAtmosDesc') ?? '(사진작가를 위한 정밀 기상 및 채광 컴퓨테이셔널 도구)' }}</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectAtmosDesc">{{ __('portfolio.projectAtmosDesc') }}</span>
                                 </span>
                                 <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -190,7 +213,7 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-60 group-hover:opacity-100 transition-all duration-300 mt-2 shrink-0"></span>
                                 <span class="leading-relaxed">
                                     <span class="theme-text font-bold block mb-0.5 group-hover:text-blue-500 transition-colors uppercase">ND PRO Calc</span>
-                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectNdCalcDesc">{{ __('portfolio.projectNdCalcDesc') ?? '(장노출 사진작가를 위한 스마트 ND 필터 노출 계산기)' }}</span>
+                                    <span class="text-xs font-normal block opacity-60" data-i18n="projectNdCalcDesc">{{ __('portfolio.projectNdCalcDesc') }}</span>
                                 </span>
                                 <svg class="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             </a>
@@ -231,7 +254,7 @@
                             <div class="flex space-x-2 shrink-0 pr-4 xl:pr-0">
                                 <div class="relative shrink-0">
                                     <select id="year-filter" aria-label="Filter by Year" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
-                                        <option value="all" data-i18n="filterAllYears">모든 연도</option>
+                                        <option value="all" data-i18n="filterAllYears">{{ __('portfolio.filterAllYears') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -239,7 +262,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="country-filter" aria-label="Filter by Country" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer">
-                                        <option value="all" data-i18n="filterAllCountries">모든 국가</option>
+                                        <option value="all" data-i18n="filterAllCountries">{{ __('portfolio.filterAllCountries') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -247,7 +270,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="camera-filter" aria-label="Filter by Camera" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[140px] truncate">
-                                        <option value="all" data-i18n="filterAllCameras">모든 기종</option>
+                                        <option value="all" data-i18n="filterAllCameras">{{ __('portfolio.exifCamera') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -255,7 +278,7 @@
                                 </div>
                                 <div class="relative shrink-0">
                                     <select id="lens-filter" aria-label="Filter by Lens" class="appearance-none bg-surface border theme-border rounded-full pl-5 pr-10 py-2 text-sm font-medium theme-text focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors cursor-pointer max-w-[160px] truncate">
-                                        <option value="all" data-i18n="filterAllLenses">모든 렌즈</option>
+                                        <option value="all" data-i18n="filterAllLenses">{{ __('portfolio.exifLens') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 theme-text-muted bg-surface rounded-r-full">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -365,7 +388,6 @@
                 <button onclick="window.Portfolio.nextPhoto()" class="nav-btn absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full theme-text hidden md:flex z-[70] items-center justify-center transition-all shadow-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-                
                 <div id="modal-slider-content" class="w-full min-h-full md:h-full flex flex-col md:flex-row items-stretch"></div>
             </div>
             

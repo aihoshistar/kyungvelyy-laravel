@@ -19,15 +19,23 @@ class PostController extends Controller
      */
     public function index($locale, $slug = null, $photoIndex = null)
     {
+        // 캐시에서 데이터 가져오기
         $posts = Cache::rememberForever('portfolio_posts', function () {
             return Post::with(['photos' => function($query) {
                 $query->orderBy('id', 'asc');
-            }])
-            ->orderBy('taken_at', 'desc')
-            ->get();
+            }])->orderBy('taken_at', 'desc')->get();
         });
 
-        return view('welcome', compact('posts'));
+        // 💡 [SEO 핵심] 딥링크(Slug) 접속 시 해당 포스트 정보를 별도로 추출
+        $seoPost = null;
+        if ($slug) {
+            $seoPost = $posts->first(function ($p) use ($slug) {
+                return $p->slug === $slug || (string)$p->id === $slug;
+            });
+        }
+
+        // seoPost가 있으면 해당 정보를, 없으면 기본 정보를 뷰로 전달
+        return view('welcome', compact('posts', 'seoPost', 'photoIndex'));
     }
 
     /**
