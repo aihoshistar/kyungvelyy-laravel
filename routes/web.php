@@ -1,4 +1,3 @@
-<!-- routes/web.php -->
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -8,8 +7,19 @@ use App\Http\Controllers\AdminManageController;
 use App\Http\Controllers\AdminCollageController;
 use App\Http\Controllers\AdminController;
 
+Route::get('/ko/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+    ->defaults('feed', 'ko')
+    ->name('feeds.ko');
+
+Route::get('/en/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+    ->defaults('feed', 'en')
+    ->name('feeds.en');
+
+Route::get('/ja/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+    ->defaults('feed', 'ja')
+    ->name('feeds.ja');
+
 Route::get('/sitemap.xml', [App\Http\Controllers\PostController::class, 'sitemap']);
-Route::get('/rss', [App\Http\Controllers\PostController::class, 'rss']);
 
 Route::get('/', function () {
     return redirect('/ko');

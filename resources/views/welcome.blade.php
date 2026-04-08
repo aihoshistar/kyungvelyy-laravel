@@ -56,7 +56,7 @@
     <!-- ========================================== -->
     <!-- 📡 5. RSS 피드 자동 발견(Auto-discovery) -->
     <!-- ========================================== -->
-    <link rel="alternate" type="application/rss+xml" title="KKYOUNG.PHOTO RSS Feed" href="{{ url('/rss') }}" />
+    <link rel="alternate" type="application/rss+xml" title="KKYOUNG.PHOTO RSS ({{ strtoupper(app()->getLocale()) }})" href="{{ url(app()->getLocale() . '/rss') }}" />
 
     <!-- 테마 설정 스크립트 -->
     <script>

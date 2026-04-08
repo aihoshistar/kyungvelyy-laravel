@@ -71,68 +71,6 @@ class PostController extends Controller
     }
 
     /**
-     * 💡 RSS 피드 동적 생성
-     * 100% 검증된 문법과 안전한 데이터 추출 방식을 적용했습니다.
-     */
-    public function rss()
-    {
-        $posts = Cache::rememberForever('portfolio_posts', function () {
-            return Post::with(['photos' => function($query) {
-                $query->orderBy('id', 'asc');
-            }])->orderBy('taken_at', 'desc')->get();
-        });
-
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>';
-        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">';
-        $xml .= '<channel>';
-        $xml .= '<title>KKYOUNG.PHOTO</title>';
-        $xml .= '<link>' . htmlspecialchars(url('/')) . '</link>';
-        $xml .= '<description>Archive of Light by PARK KYOUNG SEO.</description>';
-        $xml .= '<language>' . app()->getLocale() . '</language>';
-        $xml .= '<atom:link href="' . htmlspecialchars(url('/rss')) . '" rel="self" type="application/rss+xml" />';
-
-        foreach($posts as $post) {
-            // 앨범 내 첫 번째 사진 정보를 썸네일로 활용
-            $firstPhoto = $post->photos->first();
-            $photoUrl = $firstPhoto ? $firstPhoto->url : '';
-            
-            // 데이터 추출 (캐스팅된 배열 또는 null 방어)
-            $titleKo = data_get($post->title, 'ko') ?? data_get($post->title, 'en') ?? 'Untitled';
-            $descKo = data_get($post->description, 'ko') ?? data_get($post->description, 'en') ?? '';
-            
-            $slug = $post->slug ?? $post->id;
-            $link = htmlspecialchars(url("/ko/archive/{$slug}/1"));
-            $pubDate = $post->created_at ? $post->created_at->toRfc822String() : now()->toRfc822String();
-
-            $xml .= '<item>';
-            $xml .= '<title><![CDATA[' . $titleKo . ']]></title>';
-            $xml .= '<link>' . $link . '</link>';
-            $xml .= '<guid isPermaLink="true">' . $link . '</guid>';
-            $xml .= '<description><![CDATA[';
-            if($photoUrl) {
-                // 💡 HTML 태그 내의 URL 및 속성도 안전하게 처리
-                $xml .= '<img src="' . htmlspecialchars($photoUrl) . '" alt="' . htmlspecialchars($titleKo) . '" style="max-width:100%; border-radius:8px;"><br><br>';
-            }
-            $xml .= $descKo . ']]></description>';
-            $xml .= '<pubDate>' . $pubDate . '</pubDate>';
-            
-            if($photoUrl) {
-                // 💡 XML Attribute에는 반드시 htmlspecialchars가 적용되어야 함 (& 등의 파싱 오류 방지)
-                $xml .= '<media:content url="' . htmlspecialchars($photoUrl) . '" type="image/jpeg" medium="image"/>';
-            }
-            $xml .= '</item>';
-        }
-
-        $xml .= '</channel></rss>';
-
-        if (ob_get_length()) ob_end_clean();
-
-        // 브라우저 호환성을 위해 text/xml로 반환해도 무방합니다.
-        return response($xml)->header('Content-Type', 'text/xml; charset=utf-8');
-    }
-
-
-    /**
      * 특정 사진의 반응 토글 (POST)
      */
     public function toggleReaction(Request $request, Photo $photo)
