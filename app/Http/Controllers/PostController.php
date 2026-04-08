@@ -13,7 +13,7 @@ class PostController extends Controller
     /**
      * 메인 갤러리 페이지 렌더링
      */
-    public function index($locale)
+    public function index($locale, $slug = null, $photoIndex = null)
     {
         // 💡 [핵심] DB 조회 결과를 'portfolio_posts'라는 이름으로 영구 캐싱합니다.
         // 관리자가 사진을 올리거나 수정할 때만 이 캐시가 지워지므로, 

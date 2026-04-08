@@ -1,3 +1,5 @@
+// resources/js/portfolio/core.js
+
 import { Utils } from './utils.js';
 import { Gallery, ModalViewer, MapEngine } from './components.js';
 import { Exporter } from './exporter.js';
@@ -180,10 +182,10 @@ export const init = () => {
     if (!id) { id = 'fp_' + Math.random().toString(36).substring(2, 9) + Date.now(); localStorage.setItem('guest_fingerprint', id); }
     State.fingerprint = id;
 
-    Utils.checkUrlHash();
+    // 💡 [수정] 해시 대신 딥링크(Clean URL) 파서를 호출합니다.
+    Utils.checkDeepLink();
 };
 
-// 전역 객체 노출 (HTML 인라인 이벤트 리스너용)
 window.Portfolio = { 
     init, 
     switchView: Gallery.switchView, 

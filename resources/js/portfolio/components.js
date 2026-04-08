@@ -152,7 +152,9 @@ export const ModalViewer = {
 
     close: () => {
         DOM.modal.classList.remove('opacity-100'); DOM.modal.classList.add('opacity-0');
-        history.replaceState(null, '', window.location.pathname + window.location.search);
+        
+        // 💡 [수정] 모달을 닫을 때 메인 URL로 복귀
+        history.replaceState(null, '', `/${State.lang}`);
 
         setTimeout(() => {
             DOM.modal.classList.add('hidden');
@@ -225,7 +227,10 @@ export const ModalViewer = {
             <span class="opacity-50">PHOTO</span> ${photoNum} / ${totalPhotosInPost}
         `;
 
-        history.replaceState(null, '', `#post-${post.id}/photo-${State.currentPhotoIndex}`);
+        // 💡 [수정] Clean URL 형태로 주소창 변경 (새로고침 없음)
+        const slugOrId = post.slug || post.id;
+        const newUrl = `/${State.lang}/archive/${slugOrId}/${State.currentPhotoIndex + 1}`;
+        history.replaceState(null, '', newUrl);
         
         const titleStr = Utils.getTrans(photo.title) || Utils.getTrans(post.title); 
         const catTranslation = dict[`cat${post.category}`] || post.category;
@@ -247,7 +252,6 @@ export const ModalViewer = {
         const currentStyle = oldSelectEl ? oldSelectEl.value : (State.currentTemplate || 'original');
         State.currentTemplate = currentStyle;
 
-        // 💡 [핵심] 스켈레톤 디자인이 막대 1개 + 동그라미 3개 + 라벨 구조로 매끄럽게 교체되었습니다.
         DOM.modalSliderContent.innerHTML = `
             <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-6 relative shrink-0 h-[45vh] md:h-full min-h-0">
                 <div class="relative flex items-center justify-center w-full h-full rounded-lg overflow-hidden bg-black/5 p-2 md:p-4 min-h-0" id="photo-loupe-container">

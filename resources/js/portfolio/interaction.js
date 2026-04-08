@@ -62,7 +62,10 @@ export const Interaction = {
     sharePhoto: () => {
         const photo = State.activePost.photos[State.currentPhotoIndex];
         const title = Utils.getTrans(photo.title) || Utils.getTrans(State.activePost.title);
-        const postUrl = `${window.location.origin}${window.location.pathname}#post-${State.activePost.id}/photo-${State.currentPhotoIndex}`;
+        
+        // 💡 [수정] 공유 버튼을 눌렀을 때 생성되는 URL도 Slug 기반(Clean URL)으로 생성
+        const slugOrId = State.activePost.slug || State.activePost.id;
+        const postUrl = `${window.location.origin}/${State.lang}/archive/${slugOrId}/${State.currentPhotoIndex + 1}`;
 
         if (navigator.share) { navigator.share({ title: `PHOTO - ${title}`, url: postUrl }); }
         else { navigator.clipboard.writeText(postUrl).then(() => Utils.showToast(window.I18N[State.lang].toastCopy || 'Link Copied!')); }
