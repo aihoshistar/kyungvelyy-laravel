@@ -3,7 +3,7 @@
 import { State, DOM } from './core.js';
 import { Utils } from './utils.js';
 import { Interaction } from './interaction.js';
-import { Exporter } from './exporter.js'; // 💡 [추가] Exporter 모듈 명시적 Import
+import { Exporter } from './exporter.js'; 
 
 export const Gallery = {
     initFilters: () => {
@@ -117,20 +117,16 @@ export const ModalViewer = {
         const selectEl = document.getElementById('download-template-select');
         const currentStyle = selectEl ? selectEl.value : 'original';
 
-        // 1. 아이콘 색상 변경
         if (State.isGridActive) btnIcon.classList.replace('text-white', 'text-blue-400');
         else btnIcon.classList.replace('text-blue-400', 'text-white');
 
-        // 2. 프레임 유무에 따른 그리드 렌더링 분기처리
         if (currentStyle === 'original') {
-            // 원본 사진일 경우 HTML CSS 오버레이를 켬
             if (gridOverlay) {
                 gridOverlay.style.display = 'block';
                 gridOverlay.classList.toggle('opacity-0', !State.isGridActive);
                 gridOverlay.classList.toggle('opacity-100', State.isGridActive);
             }
         } else {
-            // 프레임이 씌워진 경우 HTML 그리드는 끄고, Canvas 렌더링을 다시 트리거함
             if (gridOverlay) gridOverlay.style.display = 'none';
             if (selectEl) selectEl.dispatchEvent(new Event('change'));
         }
@@ -141,7 +137,6 @@ export const ModalViewer = {
         State.currentPhotoIndex = initialIndex;
         State.isGridActive = false;
 
-        // 모달 열 때 기본 템플릿 유지 여부 확인 (최초는 original)
         if (!State.currentTemplate) State.currentTemplate = 'original';
 
         DOM.modalContainer.style.background = 'var(--color-surface)';
@@ -151,8 +146,6 @@ export const ModalViewer = {
         DOM.modal.classList.remove('hidden'); document.body.style.overflow = 'hidden';
         void DOM.modal.offsetWidth; 
         DOM.modal.classList.add('opacity-100'); DOM.modal.classList.remove('opacity-0');
-        
-        // 💡 [수정] 모달 진입 애니메이션 (Scale + Translate Y)
         DOM.modalContainer.classList.remove('scale-95', 'translate-y-4'); 
         DOM.modalContainer.classList.add('scale-100', 'translate-y-0');
     },
@@ -166,38 +159,79 @@ export const ModalViewer = {
             document.body.style.overflow = '';
             State.activePost = null;
             DOM.modalContainer.style.background = 'var(--color-surface)';
-            
-            // 💡 [수정] 모달 종료 애니메이션 (Scale + Translate Y)
             DOM.modalContainer.classList.remove('scale-100', 'translate-y-0'); 
             DOM.modalContainer.classList.add('scale-95', 'translate-y-4');
         }, 300);
     },
 
     next: () => {
-        if (!State.activePost || State.activePost.photos.length <= 1) return; 
-        State.currentPhotoIndex = (State.currentPhotoIndex + 1) % State.activePost.photos.length;
+        if (!State.activePost) return; 
+        
+        const posts = Gallery.getFilteredPosts().filter(p => p.photos && p.photos.length > 0);
+        if (posts.length === 0) return;
+
+        const currentPostIndex = posts.findIndex(p => p.id === State.activePost.id);
+        
+        if (State.currentPhotoIndex < State.activePost.photos.length - 1) {
+            State.currentPhotoIndex++;
+        } 
+        else {
+            const nextPostIndex = (currentPostIndex + 1) % posts.length;
+            State.activePost = posts[nextPostIndex];
+            State.currentPhotoIndex = 0;
+        }
+
         DOM.modalContainer.style.background = 'var(--color-surface)';
-        ModalViewer.renderSlide(); Interaction.fetchReactions(State.activePost.photos[State.currentPhotoIndex].id);
+        ModalViewer.renderSlide(); 
+        Interaction.fetchReactions(State.activePost.photos[State.currentPhotoIndex].id);
     },
 
     prev: () => {
-        if (!State.activePost || State.activePost.photos.length <= 1) return; 
-        State.currentPhotoIndex = (State.currentPhotoIndex - 1 + State.activePost.photos.length) % State.activePost.photos.length;
+        if (!State.activePost) return; 
+        
+        const posts = Gallery.getFilteredPosts().filter(p => p.photos && p.photos.length > 0);
+        if (posts.length === 0) return;
+
+        const currentPostIndex = posts.findIndex(p => p.id === State.activePost.id);
+        
+        if (State.currentPhotoIndex > 0) {
+            State.currentPhotoIndex--;
+        } 
+        else {
+            const prevPostIndex = (currentPostIndex - 1 + posts.length) % posts.length;
+            State.activePost = posts[prevPostIndex];
+            State.currentPhotoIndex = State.activePost.photos.length - 1; 
+        }
+
         DOM.modalContainer.style.background = 'var(--color-surface)';
-        ModalViewer.renderSlide(); Interaction.fetchReactions(State.activePost.photos[State.currentPhotoIndex].id);
+        ModalViewer.renderSlide(); 
+        Interaction.fetchReactions(State.activePost.photos[State.currentPhotoIndex].id);
     },
 
     renderSlide: () => {
         const post = State.activePost; const photo = post.photos[State.currentPhotoIndex]; if (!photo) return;
         const dict = window.I18N[State.lang];
 
+        const posts = Gallery.getFilteredPosts().filter(p => p.photos && p.photos.length > 0);
+        const currentPostNum = posts.findIndex(p => p.id === post.id) + 1;
+        const totalPosts = posts.length;
+        
+        const photoNum = String(State.currentPhotoIndex + 1).padStart(2, '0');
+        const totalPhotosInPost = String(post.photos.length).padStart(2, '0');
+
+        DOM.modalIndicator.innerHTML = `
+            <span class="opacity-50">ALBUM</span> ${currentPostNum} / ${totalPosts} 
+            <span class="mx-2 opacity-30">|</span> 
+            <span class="opacity-50">PHOTO</span> ${photoNum} / ${totalPhotosInPost}
+        `;
+
         history.replaceState(null, '', `#post-${post.id}/photo-${State.currentPhotoIndex}`);
-        DOM.modalIndicator.textContent = `${String(State.currentPhotoIndex + 1).padStart(2, '0')} / ${String(post.photos.length).padStart(2, '0')}`;
         
         const titleStr = Utils.getTrans(photo.title) || Utils.getTrans(post.title); 
         const catTranslation = dict[`cat${post.category}`] || post.category;
 
         DOM.modalTitleArea.innerHTML = `<div class="flex items-center space-x-3"><span class="text-xs px-2 py-1 rounded border theme-border theme-text-muted font-bold uppercase tracking-wider">${catTranslation}</span><h2 class="text-base md:text-lg font-semibold truncate max-w-[200px] md:max-w-md">${titleStr}</h2></div>`;
+        
         DOM.modalDots.innerHTML = post.photos.map((_, i) => `<div class="w-1 h-1 rounded-full transition-all duration-300 ${i === State.currentPhotoIndex ? 'bg-white w-3' : 'bg-white/30'}"></div>`).join('');
 
         const exifArr = [];
@@ -209,20 +243,19 @@ export const ModalViewer = {
         const targetIndex = State.currentPhotoIndex;
         if (State.currentPhotoIndex !== targetIndex) return;
 
-        // 선택 메뉴 상태 유지
         const oldSelectEl = document.getElementById('download-template-select');
         const currentStyle = oldSelectEl ? oldSelectEl.value : (State.currentTemplate || 'original');
         State.currentTemplate = currentStyle;
 
+        // 💡 [핵심] 스켈레톤 디자인이 막대 1개 + 동그라미 3개 + 라벨 구조로 매끄럽게 교체되었습니다.
         DOM.modalSliderContent.innerHTML = `
             <div class="w-full md:w-[65%] flex items-center justify-center p-4 md:p-6 relative shrink-0 h-[45vh] md:h-full min-h-0">
-                <!-- 💡 [해결] 이미지가 바깥으로 삐져나가지 않도록 min-h-0, min-w-0 부여 및 내부 p-2 패딩 추가 -->
                 <div class="relative flex items-center justify-center w-full h-full rounded-lg overflow-hidden bg-black/5 p-2 md:p-4 min-h-0" id="photo-loupe-container">
                     
                     <div class="skeleton-bg absolute inset-0 bg-white/5 animate-pulse z-0 transition-opacity duration-1000"></div>
                     
-                    <div class="relative inline-flex items-center justify-center max-w-full max-h-full z-10 min-h-0 min-w-0">
-                        <img id="active-photo-img" crossorigin="anonymous" class="block w-auto h-auto max-w-full max-h-full object-contain rounded-lg shadow-xl cursor-crosshair transform scale-[1.02] blur-lg opacity-0 transition-all duration-[0.8s] ease-out" style="max-height: 100%; max-width: 100%;">
+                    <div class="relative flex items-center justify-center w-full h-full z-10 min-h-0 min-w-0">
+                        <img id="active-photo-img" crossorigin="anonymous" class="block w-full h-full object-contain rounded-lg shadow-xl cursor-crosshair transform scale-[1.02] blur-lg opacity-0 transition-all duration-[0.8s] ease-out">
 
                         <div id="grid-overlay" class="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-300 ${State.isGridActive ? 'opacity-100' : 'opacity-0'}" style="display: ${currentStyle === 'original' ? 'block' : 'none'};">
                             <div class="absolute left-0 right-0 h-[1px] bg-white/50 shadow-[0_0_2px_rgba(0,0,0,0.8)]" style="top: 33.33%;"></div>
@@ -249,11 +282,13 @@ export const ModalViewer = {
 
                 <div class="space-y-3">
                     <span class="block text-xs md:text-sm theme-text-muted uppercase font-bold tracking-widest">${dict.colorPalette || 'Color Palette'}</span>
-                    <div id="color-palette-container" class="flex gap-3">
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
-                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                    <div id="color-palette-container" class="w-full flex flex-col">
+                        <div class="w-full h-1.5 flex rounded-full overflow-hidden mb-3 bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                        <div class="flex flex-wrap gap-x-5 gap-y-2 mt-1">
+                            <div class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div><div class="w-16 h-3 bg-gray-200 dark:bg-gray-800 animate-pulse rounded"></div></div>
+                            <div class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div><div class="w-16 h-3 bg-gray-200 dark:bg-gray-800 animate-pulse rounded"></div></div>
+                            <div class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div><div class="w-16 h-3 bg-gray-200 dark:bg-gray-800 animate-pulse rounded"></div></div>
+                        </div>
                     </div>
                 </div>
 
@@ -375,12 +410,26 @@ export const ModalViewer = {
                 }
             }
             
-            if (post.photos.length > 1) {
-                const nextIdx = (targetIndex + 1) % post.photos.length;
-                const prevIdx = (targetIndex - 1 + post.photos.length) % post.photos.length;
-                const preloadNext = new Image(); preloadNext.crossOrigin = "Anonymous"; preloadNext.src = post.photos[nextIdx].url;
-                const preloadPrev = new Image(); preloadPrev.crossOrigin = "Anonymous"; preloadPrev.src = post.photos[prevIdx].url;
+            const currentPostIndex = posts.findIndex(p => p.id === post.id);
+
+            let nextPostIdx = currentPostIndex;
+            let nextPhotoIdx = State.currentPhotoIndex + 1;
+            if (nextPhotoIdx >= posts[nextPostIdx].photos.length) {
+                nextPostIdx = (nextPostIdx + 1) % posts.length;
+                nextPhotoIdx = 0;
             }
+
+            let prevPostIdx = currentPostIndex;
+            let prevPhotoIdx = State.currentPhotoIndex - 1;
+            if (prevPhotoIdx < 0) {
+                prevPostIdx = (prevPostIdx - 1 + posts.length) % posts.length;
+                prevPhotoIdx = posts[prevPostIdx].photos.length - 1;
+            }
+
+            const preloadNext = new Image(); preloadNext.crossOrigin = "Anonymous"; 
+            preloadNext.src = posts[nextPostIdx].photos[nextPhotoIdx].url;
+            const preloadPrev = new Image(); preloadPrev.crossOrigin = "Anonymous"; 
+            preloadPrev.src = posts[prevPostIdx].photos[prevPhotoIdx].url;
         });
     }
 };

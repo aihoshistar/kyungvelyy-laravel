@@ -17,11 +17,13 @@ export const Exporter = {
         });
     },
 
-    generateCanvas: async (post, photo, style) => {
+    // 💡 [수정] isPreview 파라미터를 추가하여 미리보기와 다운로드의 해상도를 다르게 처리
+    generateCanvas: async (post, photo, style, isPreview = false) => {
         const img = await Exporter.loadImage(photo.url);
         
-        // 💡 [수정] 모바일/Safari 캔버스 메모리 한계(약 16.77MP) 초과 방지
-        const MAX_CANVAS_AREA = 16000000; 
+        // 💡 [핵심] 다운로드는 16MP 최고화질, 뷰어 미리보기는 모바일 메모리를 고려해 2.5MP로 제한하여 잘림 현상 방지
+        const MAX_CANVAS_AREA = isPreview ? 2500000 : 16000000; 
+        
         let scale = 1.0;
         let estimatedArea = img.width * img.height;
 
@@ -53,8 +55,9 @@ export const Exporter = {
 
     getPreviewUrl: async (post, photo, style) => {
         try {
-            const canvas = await Exporter.generateCanvas(post, photo, style);
-            return canvas.toDataURL("image/jpeg", 0.85); // 뷰어용은 최적화를 위해 0.85 반환
+            // 미리보기용(true) 캔버스 생성 요청
+            const canvas = await Exporter.generateCanvas(post, photo, style, true);
+            return canvas.toDataURL("image/jpeg", 0.85);
         } catch (error) {
             console.error('Preview generation failed:', error);
             return photo.url;
@@ -71,13 +74,14 @@ export const Exporter = {
         Utils.showToast(window.I18N[State.lang].toastWait || 'Generating frame...');
         
         try {
-            const canvas = await Exporter.generateCanvas(post, photo, style);
+            // 다운로드용(false) 최고화질 캔버스 생성 요청
+            const canvas = await Exporter.generateCanvas(post, photo, style, false);
             const cleanSlug = post.slug ? post.slug.replace(/[^a-zA-Z0-9-]/g, '') : 'post';
             const filename = `kkyung_${style}_${cleanSlug}_${photo.id}.jpg`;
             
             const link = document.createElement('a');
             link.download = filename;
-            link.href = canvas.toDataURL("image/jpeg", 1.0); // 다운로드는 화질 1.0 보장
+            link.href = canvas.toDataURL("image/jpeg", 1.0); 
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -87,7 +91,6 @@ export const Exporter = {
         }
     },
 
-    // 💡 [수정] 캔버스에 직접 그리드를 그릴 때, 이미지의 offset 좌표를 기준으로 그림
     drawGridIfActive: (ctx, img, offsetX, offsetY) => {
         if (!State.isGridActive) return;
         ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
@@ -178,7 +181,6 @@ export const Exporter = {
         Exporter.drawGridIfActive(ctx, img, marginX, marginTop);
     },
 
-    // 💡 [수정] 카메라 세팅값 텍스트 간격 넉넉히 벌리고 포커스 사각형/점들 삭제, 배터리 100% 충전
     drawZfViewfinderStyle: (ctx, canvas, img, post, photo) => {
         canvas.width = img.width;
         canvas.height = img.height;
@@ -199,7 +201,6 @@ export const Exporter = {
         ctx.strokeStyle = "#FFFFFF";
         ctx.lineWidth = Math.max(1.5, img.width * 0.0015);
         
-        // 상단 UI 정렬
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         const topY = padY + fontLarge * 0.5;
@@ -212,7 +213,7 @@ export const Exporter = {
         ctx.strokeRect(sBoxX, topY - fontSize * 0.8, fontSize * 1.3, fontSize * 1.6);
         ctx.fillText("S", sBoxX + fontSize * 0.3, topY);
         
-        const afcX = sBoxX + fontSize * 3.0; // 간격 넓힘
+        const afcX = sBoxX + fontSize * 3.0;
         ctx.fillText("AF-C", afcX, topY);
 
         const meterX = afcX + fontSize * 4.5; 
@@ -228,15 +229,14 @@ export const Exporter = {
         ctx.fillText("FX", rightX, topY);
         
         ctx.font = `bold ${fontSmall}px Arial, sans-serif`;
-        ctx.fillText("NORM", rightX - fontSize * 3.5, topY + fontSize * 0.15); // 간격 넓힘
+        ctx.fillText("NORM", rightX - fontSize * 3.5, topY + fontSize * 0.15);
         
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-        ctx.fillText("AUTO", rightX - fontSize * 6.5, topY); // 간격 넓힘
+        ctx.fillText("AUTO", rightX - fontSize * 6.5, topY);
         
         ctx.font = `bold ${fontSmall}px Arial, sans-serif`;
-        ctx.fillText("WB", rightX - fontSize * 9.5, topY + fontSize * 0.15); // 간격 넓힘
+        ctx.fillText("WB", rightX - fontSize * 9.5, topY + fontSize * 0.15);
 
-        // 하단 UI
         ctx.textBaseline = "alphabetic"; 
         const bottomY = canvas.height - padY;
         const cx = canvas.width / 2;
@@ -256,8 +256,8 @@ export const Exporter = {
         const sSpeed = (photo.exif_shutter_speed_num && photo.exif_shutter_speed_den) ? `${photo.exif_shutter_speed_num}/${photo.exif_shutter_speed_den}` : '---';
         const isoVal = photo.exif_iso ? `${photo.exif_iso}` : '---';
 
-        ctx.fillText(sSpeed, cx - fontSize * 6.0, bottomY); // 셔터스피드 간격
-        ctx.fillText(fStop, cx - fontSize * 1.0, bottomY); // 조리개 간격
+        ctx.fillText(sSpeed, cx - fontSize * 6.0, bottomY);
+        ctx.fillText(fStop, cx - fontSize * 1.0, bottomY);
         
         ctx.shadowColor = "transparent";
         const isoBoxX = cx + fontSize * 3.5; 
@@ -295,18 +295,15 @@ export const Exporter = {
         ctx.fillText("i", rightX - fontSize * 0.5, iBoxY + fontSize * 0.75);
         ctx.textBaseline = "alphabetic";
         
-        // 🔋 배터리 100% 꽉 채움 그래픽
         const batY = bottomY - fontSize * 3.0;
         ctx.lineWidth = Math.max(1.5, img.width * 0.0015);
         ctx.strokeRect(rightX - fontSize * 2.0, batY, fontSize * 1.8, fontSize * 0.8);
-        // 배터리 잔량 3칸 모두 칠함
         ctx.fillRect(rightX - fontSize * 1.8, batY + fontSize * 0.15, fontSize * 1.4, fontSize * 0.5); 
         ctx.fillRect(rightX - fontSize * 0.2, batY + fontSize * 0.2, fontSize * 0.2, fontSize * 0.4);
 
         Exporter.drawGridIfActive(ctx, img, 0, 0);
     },
 
-    // 💡 [수정] 텍스트 간격 완전 분리, 포커스 사각형 완전 삭제, 100% 배터리
     drawNikonLcdStyle: (ctx, canvas, img, post, photo) => {
         const maxDim = Math.max(img.width, img.height);
         const pad = maxDim * 0.12; 
@@ -319,8 +316,6 @@ export const Exporter = {
         ctx.drawImage(img, pad, pad, img.width, img.height);
 
         const cy = canvas.height / 2;
-
-        // 초점 포커스 박스 삭제됨
 
         const fSize = Math.max(16, maxDim * 0.02);
         const fSmall = fSize * 0.7;
@@ -358,7 +353,6 @@ export const Exporter = {
             ctx.restore();
         };
 
-        // --- 상단 UI (간격 넉넉하게 확장) ---
         const topY = pad / 2;
         ctx.textAlign = "center";
         ctx.font = `bold ${fSize}px Arial, sans-serif`;
@@ -369,7 +363,6 @@ export const Exporter = {
         tx += fSize * 4.0; ctx.fillText("AF-C", tx, topY);
         tx += fSize * 5.0; ctx.fillText("[ WIDE-L ]", tx, topY);
         
-        // 우측 정렬된 그룹
         const rightAnchor = canvas.width - pad;
         drawBoxedText("DX", rightAnchor - fSize * 2.0, topY);
         ctx.fillText("WB A1", rightAnchor - fSize * 6.5, topY);
@@ -382,7 +375,6 @@ export const Exporter = {
         ctx.lineTo(canvas.width - pad - fSize + fSize*0.3, topY + fSize*0.4);
         ctx.stroke();
 
-        // --- 하단 UI ---
         const botY = canvas.height - (pad / 2);
         ctx.textAlign = "left";
         ctx.font = `bold ${fLarge}px Arial, sans-serif`;
@@ -396,13 +388,11 @@ export const Exporter = {
         ctx.font = `bold ${fSmall}px Arial, sans-serif`;
         ctx.fillText("A FLICKER", canvas.width - pad - fSize*4.0, botY);
         
-        // 🔋 배터리 100% 꽉 채움
         const batX = canvas.width - pad - fSize*2.5;
         ctx.strokeRect(batX, botY - fSize*0.4, fSize*1.6, fSize*0.8);
         ctx.fillRect(batX + fSize*0.1, botY - fSize*0.3, fSize*1.4, fSize*0.6); 
         ctx.fillRect(batX + fSize*1.6, botY - fSize*0.2, fSize*0.15, fSize*0.4);
 
-        // --- 우측 세로 UI (간격 분리) ---
         const rightX = canvas.width - (pad / 2);
         
         drawRotatedText("RAW+B", rightX, pad + fSize*4.5, "center");
@@ -465,3 +455,5 @@ export const Exporter = {
         Exporter.drawGridIfActive(ctx, img, 0, 0);
     }
 };
+
+window.PhotoExporter = Exporter;

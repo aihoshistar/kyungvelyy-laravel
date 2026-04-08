@@ -1,3 +1,5 @@
+// resources/js/portfolio/utils.js
+
 import { State, DOM } from './core.js';
 import { ModalViewer } from './components.js';
 
@@ -14,75 +16,154 @@ export const Utils = {
         setTimeout(() => DOM.toast.classList.add('opacity-0', 'translate-y-10'), 3000);
     },
 
+    // 💡 [핵심] K-Means 알고리즘을 이용한 3가지 색상 완벽 추출 (60-30-10 법칙 분석용)
     extractPalette: (imgEl) => {
         const defaultColors = [
-            { raw: '#4B5563', glow: 'rgba(75, 85, 99, 0.2)' }, { raw: '#374151', glow: 'rgba(55, 65, 81, 0.2)' },
-            { raw: '#1F2937', glow: 'rgba(31, 41, 55, 0.2)' }, { raw: '#111827', glow: 'rgba(17, 24, 39, 0.2)' }
+            { raw: '#4B5563', glow: 'rgba(75, 85, 99, 0.2)', ratio: 60, role: 'Dominant', displayRatio: 60 }, 
+            { raw: '#374151', glow: 'rgba(55, 65, 81, 0.2)', ratio: 30, role: 'Secondary', displayRatio: 30 },
+            { raw: '#1F2937', glow: 'rgba(31, 41, 55, 0.2)', ratio: 10, role: 'Accent', displayRatio: 10 }
         ];
+        
         if (!imgEl.complete || imgEl.naturalWidth === 0) return defaultColors;
 
         try {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            // 성능을 위해 50x50 해상도로 다운샘플링하여 연산 (총 2,500픽셀)
             canvas.width = 50; canvas.height = 50;
             ctx.drawImage(imgEl, 0, 0, 50, 50);
 
             const data = ctx.getImageData(0, 0, 50, 50).data;
-            const colorCounts = {};
+            const pixels = [];
 
-            for (let i = 0; i < data.length; i += 16) {
-                const r = Math.round(data[i] / 10) * 10;
-                const g = Math.round(data[i+1] / 10) * 10;
-                const b = Math.round(data[i+2] / 10) * 10;
-                if(data[i+3] < 255) continue;
-                const rgb = `${r},${g},${b}`;
-                colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
-            }
-
-            const sortedColors = Object.entries(colorCounts)
-                .sort((a, b) => b[1] - a[1])
-                .map(entry => {
-                    const [r, g, b] = entry[0].split(',').map(Number);
-                    return { r, g, b };
-                });
-
-            const finalColors = [];
-            const minDistance = 50;
-            const getDistance = (c1, c2) => Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
-
-            for (const color of sortedColors) {
-                if (finalColors.length >= 4) break;
-                let isDistinct = true;
-                for (const existingColor of finalColors) {
-                    if (getDistance(color, existingColor) < minDistance) { isDistinct = false; break; }
+            // 투명도가 있는 픽셀은 제외하고 RGB 수집
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i+3] >= 128) { 
+                    pixels.push({ r: data[i], g: data[i+1], b: data[i+2] });
                 }
-                if (isDistinct) finalColors.push(color);
             }
 
-            while(finalColors.length < 4 && sortedColors.length > finalColors.length) {
-                finalColors.push(sortedColors[finalColors.length]);
+            if (pixels.length === 0) return defaultColors;
+
+            const k = 3; // 3가지 대표 색상 (60-30-10 법칙 용도)
+            let centroids = [];
+            
+            // 1. 초기 중심점 랜덤 선택
+            for (let i = 0; i < k; i++) {
+                centroids.push(pixels[Math.floor(Math.random() * pixels.length)]);
             }
 
-            return finalColors.map(c => ({
-                raw: `rgb(${c.r}, ${c.g}, ${c.b})`,
-                glow: `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`
+            let clusters = Array.from({length: k}, () => []);
+            const maxIter = 10; // 브라우저 렉 방지를 위해 최대 10회 반복 제한
+
+            // 2. K-Means 반복 연산
+            for (let iter = 0; iter < maxIter; iter++) {
+                clusters = Array.from({length: k}, () => []);
+                
+                // 각 픽셀을 가장 가까운 중심점(Centroid) 군집에 할당
+                for (const p of pixels) {
+                    let minDist = Infinity;
+                    let bestK = 0;
+                    for (let i = 0; i < k; i++) {
+                        const d = Math.sqrt(Math.pow(p.r - centroids[i].r, 2) + Math.pow(p.g - centroids[i].g, 2) + Math.pow(p.b - centroids[i].b, 2));
+                        if (d < minDist) { minDist = d; bestK = i; }
+                    }
+                    clusters[bestK].push(p);
+                }
+                
+                // 새로운 중심점 계산
+                let moved = false;
+                for (let i = 0; i < k; i++) {
+                    if (clusters[i].length === 0) {
+                        centroids[i] = pixels[Math.floor(Math.random() * pixels.length)];
+                        moved = true;
+                        continue;
+                    }
+                    let sumR = 0, sumG = 0, sumB = 0;
+                    for (const p of clusters[i]) { sumR += p.r; sumG += p.g; sumB += p.b; }
+                    const newR = Math.round(sumR / clusters[i].length);
+                    const newG = Math.round(sumG / clusters[i].length);
+                    const newB = Math.round(sumB / clusters[i].length);
+                    
+                    if (centroids[i].r !== newR || centroids[i].g !== newG || centroids[i].b !== newB) {
+                        moved = true;
+                        centroids[i] = { r: newR, g: newG, b: newB };
+                    }
+                }
+                if (!moved) break; // 중심점이 더 이상 변하지 않으면 조기 종료
+            }
+
+            // 3. 비율(%) 계산 및 정렬
+            const totalPixels = pixels.length;
+            const roles = ['Dominant', 'Secondary', 'Accent'];
+            const results = clusters.map((cluster, i) => {
+                return {
+                    color: centroids[i],
+                    count: cluster.length,
+                    ratio: (cluster.length / totalPixels) * 100
+                };
+            }).sort((a, b) => b.ratio - a.ratio); // 점유율 높은 순으로 정렬
+
+            // 💡 UX 디테일: 합계가 무조건 100%가 되도록 소수점 오차 보정
+            let roundedRatios = results.map(r => Math.round(r.ratio));
+            let ratioSum = roundedRatios.reduce((a, b) => a + b, 0);
+            if (ratioSum !== 100 && roundedRatios.length > 0) {
+                roundedRatios[0] += (100 - ratioSum); // 주조색(Dominant)에 오차값 반영
+            }
+
+            return results.map((r, i) => ({
+                raw: `rgb(${r.color.r}, ${r.color.g}, ${r.color.b})`,
+                glow: `rgba(${r.color.r}, ${r.color.g}, ${r.color.b}, 0.25)`,
+                ratio: r.ratio, // CSS width 용 (소수점 유지)
+                displayRatio: roundedRatios[i], // Text 표시용 (정수, 합계 100%)
+                role: roles[i] || 'Accent'
             }));
-        } catch(e) { return defaultColors; }
+
+        } catch(e) { 
+            return defaultColors; 
+        }
     },
 
     applyColorFeatures: (imgEl) => {
         const colors = Utils.extractPalette(imgEl);
         const paletteContainer = document.getElementById('color-palette-container');
+        
         if (paletteContainer && colors && colors.length > 0) {
-            paletteContainer.innerHTML = colors.map(c =>
-                `<div class="w-8 h-4 rounded-sm shadow-sm border border-white/10 transition-colors duration-500" style="background-color: ${c.raw};"></div>`
-            ).join('');
+            // 만약 군집이 부족할 경우 빈 데이터 추가 방어 코드
+            while (colors.length < 3) colors.push({ raw: 'transparent', glow: 'transparent', ratio: 0, displayRatio: 0, role: '' });
 
+            // 1. 100% 비율 바 (Progress Bar)
+            const barHtml = `
+                <div class="w-full h-1.5 flex rounded-full overflow-hidden mb-3 opacity-90 shadow-inner bg-gray-200 dark:bg-gray-800">
+                    ${colors.filter(c => c.ratio > 0).map(c => `
+                        <div style="width: ${c.ratio}%; background-color: ${c.raw};" class="transition-all duration-1000 ease-out"></div>
+                    `).join('')}
+                </div>
+            `;
+
+            // 2. 텍스트 라벨 (Dominant / Secondary / Accent)
+            const itemsHtml = `
+                <div class="flex flex-wrap gap-x-5 gap-y-2 mt-1">
+                    ${colors.filter(c => c.ratio > 0).map((c, i) => `
+                        <div class="flex items-center gap-2 group cursor-default">
+                            <div class="w-3.5 h-3.5 rounded-full shadow-sm border border-white/20 transition-transform duration-300 group-hover:scale-110" style="background-color: ${c.raw};"></div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-mono font-medium theme-text-muted group-hover:theme-text transition-colors">${c.displayRatio}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            paletteContainer.className = 'w-full flex flex-col';
+            paletteContainer.innerHTML = barHtml + itemsHtml;
+
+            // 💡 3-Color Glow (주조색이 상단을 넓게 감싸고, 보조색/강조색이 하단 양쪽에서 받쳐주는 디자인)
             DOM.modalContainer.style.background = `
-                radial-gradient(circle at 10% 10%, ${colors[0]?.glow || 'transparent'} 0%, transparent 50%),
-                radial-gradient(circle at 90% 10%, ${colors[1]?.glow || 'transparent'} 0%, transparent 50%),
-                radial-gradient(circle at 10% 90%, ${colors[2]?.glow || 'transparent'} 0%, transparent 50%),
-                radial-gradient(circle at 90% 90%, ${colors[3]?.glow || 'transparent'} 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 0%, ${colors[0]?.glow || 'transparent'} 0%, transparent 60%),
+                radial-gradient(circle at 0% 100%, ${colors[1]?.glow || 'transparent'} 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, ${colors[2]?.glow || 'transparent'} 0%, transparent 50%),
                 var(--color-surface)
             `;
         }
