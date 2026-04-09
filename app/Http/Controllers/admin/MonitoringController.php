@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\admin;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
@@ -10,8 +11,7 @@ class MonitoringController extends Controller
     /**
      * 로그 파일을 파싱하여 대시보드 뷰를 반환합니다.
      */
-    public function index(Request $request)
-    {
+    public function index(Request $request) {
         // 미들웨어(AdminBasicAuth)에서 전역으로 인증을 처리하므로
         // 기존의 ?key=비밀번호 검사 로직을 삭제하여 코드를 간결하게 만듭니다.
 
@@ -22,7 +22,7 @@ class MonitoringController extends Controller
             // 파일을 읽어서 역순으로 정렬 (최신 로그가 위로)
             $fileContent = File::get($logPath);
             $rawLogs = explode("\n", trim($fileContent));
-            
+
             // 최근 100줄만 추출하여 파싱
             $latestLogs = array_reverse(array_slice($rawLogs, -100));
 
@@ -31,7 +31,7 @@ class MonitoringController extends Controller
 
                 // 로그 레벨 추출 (ERROR, INFO, WARNING 등)
                 preg_match('/^\[(?P<date>.*)\] (?P<env>\w+)\.(?P<level>\w+): (?P<message>.*)/', $line, $matches);
-                
+
                 $logs[] = [
                     'timestamp' => $matches['date'] ?? '-',
                     'level'     => $matches['level'] ?? 'DEBUG',
@@ -47,8 +47,7 @@ class MonitoringController extends Controller
     /**
      * 로그 레벨에 따른 CSS 클래스 반환
      */
-    private function getLevelClass($level)
-    {
+    private function getLevelClass($level) {
         return match (strtoupper($level)) {
             'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY' => 'text-red-400 border-red-900/30 bg-red-900/10',
             'WARNING' => 'text-yellow-400 border-yellow-900/30 bg-yellow-900/10',

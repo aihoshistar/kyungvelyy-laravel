@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class AdminCollageController extends Controller
     public function searchPosts(Request $request)
     {
         $query = $request->get('q');
-        
+
         $posts = Post::when($query, function ($q) use ($query) {
                 // 다국어 JSON 필드 검색 (필요에 따라 title->ko 등으로 수정)
                 $q->where('title', 'like', "%{$query}%")

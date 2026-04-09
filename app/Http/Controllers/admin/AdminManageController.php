@@ -1,33 +1,31 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache; 
+use Illuminate\Support\Facades\Cache;
 
 class AdminManageController extends Controller
 {
     // 1. 관리자 메타데이터 수정 페이지 렌더링
-    public function index()
-    {
+    public function index() {
         // 미들웨어에서 이미 인증을 처리하므로 세션 체크 삭제
         return view('admin.manage');
     }
 
     // 2. 전체 앨범 및 사진 데이터 불러오기 (API)
-    public function getPosts()
-    {
+    public function getPosts() {
         // 최신순으로 앨범과 속한 사진들을 모두 가져옵니다.
         $posts = Post::with('photos')->orderBy('created_at', 'desc')->get();
         return response()->json($posts);
     }
 
     // 3. 앨범(Post) 메타데이터 수정 (API)
-    public function updatePost(Request $request, $id)
-    {
+    public function updatePost(Request $request, $id) {
         try {
             $post = Post::findOrFail($id);
 
@@ -56,8 +54,7 @@ class AdminManageController extends Controller
     }
 
     // 4. 개별 사진(Photo) 메타데이터 및 EXIF 수정 (API)
-    public function updatePhoto(Request $request, $id)
-    {
+    public function updatePhoto(Request $request, $id) {
         try {
             $photo = Photo::findOrFail($id);
 
@@ -87,11 +84,10 @@ class AdminManageController extends Controller
     }
 
     // 5. 앨범(Post) 및 속한 사진 삭제 (API)
-    public function destroyPost($id)
-    {
+    public function destroyPost($id) {
         try {
             $post = Post::findOrFail($id);
-            
+
             // 앨범에 속한 사진 데이터들도 DB에서 삭제
             Photo::where('post_id', $id)->delete();
             $post->delete();

@@ -1,3 +1,5 @@
+{{-- resources/views/admin/upload.blade.php --}}
+
 @extends('layouts.admin')
 
 @section('title', 'STUDIO UPLOAD')
@@ -13,11 +15,11 @@
 @section('content')
 <!-- Main Content -->
 <div class="flex-grow flex flex-col md:flex-row w-full max-w-7xl mx-auto p-6 md:p-10 gap-8 overflow-hidden bg-[#050505]">
-    
+
     <!-- Left: Upload Controller -->
     <!-- h-full과 overflow-y-auto를 주어 왼쪽 패널이 길어져도 자체적으로 스크롤되게 합니다 -->
     <div class="w-full md:w-1/3 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 pb-10 md:pb-0 h-full">
-        
+
         <!-- [추가] 기존 앨범에 이어 올리기 위한 Post ID 입력란 -->
         <div class="bg-[#111] border border-white/10 rounded-2xl p-6 shrink-0">
             <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Attach to Existing Album (Optional)</label>
@@ -80,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(type === 'success') color = 'text-green-400';
         if(type === 'error') color = 'text-red-400';
         if(type === 'warn') color = 'text-yellow-400';
-        
+
         div.innerHTML = `<span class="text-gray-600 mr-2">[${time}]</span><span class="${color}">${msg}</span>`;
         logContainer.appendChild(div);
         logContainer.scrollTop = logContainer.scrollHeight;
@@ -112,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadBtn.addEventListener('click', async () => {
         uploadBtn.setAttribute('disabled', 'true');
         uploadBtn.textContent = 'PROCESSING...';
-        
+
         currentPostId = existingPostIdInput.value.trim() || null;
-        
+
         if (currentPostId) {
             log(`\n🚀 Starting batch upload (Attaching to Post ID: ${currentPostId})...`, 'info');
         } else {
@@ -124,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             log(`[${i+1}/${selectedFiles.length}] Uploading ${file.name}...`);
-            
+
             let uploadSuccess = false;
             let retryCount = 0;
             let currentWaitTime = 30000;
@@ -133,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formData = new FormData();
                 formData.append('photo', file);
                 formData.append('location_hint', locationHint.value);
-                
+
                 if (currentPostId) {
                     formData.append('post_id', currentPostId);
                 }
@@ -158,16 +160,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         uploadSuccess = true;
                     } else {
                         const errorMsg = data.error || 'Unknown error';
-                        
+
                         if (errorMsg.includes('Quota') || errorMsg.includes('retry') || errorMsg.includes('429')) {
                             retryCount++;
                             log(`⚠️ Rate Limit Hit! API 허용량 초과. ${currentWaitTime / 1000}초 대기 후 재시도합니다... (${retryCount}번째 재시도)`, 'warn');
-                            
+
                             await new Promise(r => setTimeout(r, currentWaitTime));
-                            currentWaitTime = Math.min(currentWaitTime * 2, 1800000); 
+                            currentWaitTime = Math.min(currentWaitTime * 2, 1800000);
                         } else {
                             log(`❌ Error: ${errorMsg}`, 'error');
-                            break; 
+                            break;
                         }
                     }
                 } catch (error) {
@@ -183,13 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         log('\n✨ Batch processing completed.', 'success');
-        
+
         // Show Toast (Using common layout function)
         if (window.showToast) window.showToast('모든 작업이 완료되었습니다!', false);
-        
-        currentPostId = null; 
-        existingPostIdInput.value = ''; 
-        
+
+        currentPostId = null;
+        existingPostIdInput.value = '';
+
         uploadBtn.textContent = 'UPLOAD COMPLETED';
         setTimeout(() => { uploadBtn.textContent = 'START BATCH UPLOAD'; updateUI(); }, 3000);
         selectedFiles = [];

@@ -2,20 +2,17 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
-use App\Http\Controllers\MonitoringController;
-use App\Http\Controllers\AdminManageController;
-use App\Http\Controllers\AdminCollageController;
-use App\Http\Controllers\AdminController;
+use Spatie\Feed\Http\FeedController;
 
-Route::get('/ko/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+Route::get('/ko/rss', [FeedController::class, '__invoke'])
     ->defaults('feed', 'ko')
     ->name('feeds.ko');
 
-Route::get('/en/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+Route::get('/en/rss', [FeedController::class, '__invoke'])
     ->defaults('feed', 'en')
     ->name('feeds.en');
 
-Route::get('/ja/rss', [\Spatie\Feed\Http\FeedController::class, '__invoke'])
+Route::get('/ja/rss', [FeedController::class, '__invoke'])
     ->defaults('feed', 'ja')
     ->name('feeds.ja');
 
@@ -28,7 +25,7 @@ Route::get('/', function () {
 // 💡 where 조건 추가 및 다국어 그룹
 Route::prefix('{locale}')->where(['locale' => 'ko|en|ja'])->group(function () {
     Route::get('/', [PostController::class, 'index'])->name('home');
-    
+
     // 💡 [추가] Slug 기반 Clean URL 딥링크 (이 주소로 들어와도 메인 포트폴리오 뷰를 반환)
     Route::get('/archive/{slug}/{photo_index?}', [PostController::class, 'index']);
 });
@@ -38,9 +35,15 @@ Route::prefix('api')->group(function () {
     Route::post('/photos/{photo}/react', [PostController::class, 'toggleReaction']);
 });
 
+
+use App\Http\Controllers\admin\MonitoringController;
+use App\Http\Controllers\admin\AdminManageController;
+use App\Http\Controllers\admin\AdminCollageController;
+use App\Http\Controllers\admin\AdminController;
+
 Route::middleware(['admin'])->prefix('admin')->group(function () {
     Route::get('/logs/monitoring-dashboard', [MonitoringController::class, 'index'])->name('admin.monitoring');
-    
+
     Route::get('/upload', [AdminController::class, 'uploadView']);
     Route::post('/upload-process', [AdminController::class, 'processUpload']);
 

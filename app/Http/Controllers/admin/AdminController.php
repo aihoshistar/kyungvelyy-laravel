@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Photo;
 use Illuminate\Http\Request;
@@ -10,25 +11,21 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
-use App\Services\GeminiVisionService; 
+use App\Services\GeminiVisionService;
 
 class AdminController extends Controller
 {
     /**
      * 업로드 페이지 렌더링
      */
-    public function uploadView(Request $request)
-    {
-        // 미들웨어(AdminBasicAuth)에서 이미 인증을 처리하므로 
-        // 기존의 key 파라미터 체크 및 세션(is_admin) 검사 로직을 모두 삭제했습니다.
+    public function uploadView(Request $request) {
         return view('admin.upload');
     }
 
     /**
      * 사진 업로드 처리 (AJAX)
      */
-    public function processUpload(Request $request)
-    {
+    public function processUpload(Request $request) {
         // 미들웨어에서 인증 처리됨
         $request->validate([
             'photo'         => 'required|image|mimes:jpeg,png,jpg|max:51200',
@@ -87,7 +84,7 @@ class AdminController extends Controller
             }
 
             // --- 3. 서비스 클래스를 호출하여 AI 분석 실행 ---
-            // 💡 여기서 내부적으로 1024px 사이즈로 줄인 이미지를 API로 전송하므로 
+            // 💡 여기서 내부적으로 1024px 사이즈로 줄인 이미지를 API로 전송하므로
             // 60초 타임아웃 문제를 예방할 수 있습니다.
             $visionService = new GeminiVisionService();
             $aiData = $visionService->analyzeImage($file, $locationHint, $geminiKey);
